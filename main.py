@@ -752,45 +752,7 @@ def admin_dashboard():
         logs=logs,
         error=request.args.get("error"),
         message=request.args.get("message")
-    )
-
-@app.route("/admin/update_wallet", methods=["POST"])
-def admin_update_wallet():
-    if not session.get("is_admin"):
-        return redirect(url_for("admin_login", error="Unauthorized access."))
-
-    user_id = request.form.get("user_id")
-    amount = request.form.get("amount")
-    action = request.form.get("action")
-
-    try:
-        amount = float(amount)
-        if action not in ["deposit", "withdraw"]:
-            return redirect(url_for("admin_dashboard", error="Invalid action."))
-
-        with get_db_connection() as conn:
-            cursor = conn.cursor()
-
-            cursor.execute("SELECT id FROM users WHERE id = %s", (user_id,))
-            if not cursor.fetchone():
-                return redirect(url_for("admin_dashboard", error="User not found."))
-
-            if action == "deposit":
-                update_wallet(user_id, amount)
-                log_transaction(user_id, "deposit", amount)
-
-            elif action == "withdraw":
-                wallet_balance = get_wallet_balance(user_id)
-                if wallet_balance is None or wallet_balance < amount:
-                    return redirect(url_for("admin_dashboard", error="Insufficient balance for withdrawal."))
-
-                update_wallet(user_id, -amount)
-                log_transaction(user_id, "withdrawal", amount)
-
-        return redirect(url_for("admin_dashboard", message="Wallet updated successfully."))
-
-    except ValueError:
-        return redirect(url_for("admin_dashboard", error="Invalid amount. Please enter a valid number."))
+    )  
         
 @app.route("/admin/visitor_log")
 def view_visits():
@@ -838,6 +800,46 @@ def robots_txt():
         {'Content-Type': 'text/plain'}
     )
 
+#OLD CODE
+@app.route("/admin/update_wallet", methods=["POST"])
+def admin_update_wallet():
+    if not session.get("is_admin"):
+        return redirect(url_for("admin_login", error="Unauthorized access."))
+
+    user_id = request.form.get("user_id")
+    amount = request.form.get("amount")
+    action = request.form.get("action")
+
+    try:
+        amount = float(amount)
+        if action not in ["deposit", "withdraw"]:
+            return redirect(url_for("admin_dashboard", error="Invalid action."))
+
+        with get_db_connection() as conn:
+            cursor = conn.cursor()
+
+            cursor.execute("SELECT id FROM users WHERE id = %s", (user_id,))
+            if not cursor.fetchone():
+                return redirect(url_for("admin_dashboard", error="User not found."))
+
+            if action == "deposit":
+                update_wallet(user_id, amount)
+                log_transaction(user_id, "deposit", amount)
+
+            elif action == "withdraw":
+                wallet_balance = get_wallet_balance(user_id)
+                if wallet_balance is None or wallet_balance < amount:
+                    return redirect(url_for("admin_dashboard", error="Insufficient balance for withdrawal."))
+
+                update_wallet(user_id, -amount)
+                log_transaction(user_id, "withdrawal", amount)
+
+        return redirect(url_for("admin_dashboard", message="Wallet updated successfully."))
+
+    except ValueError:
+        return redirect(url_for("admin_dashboard", error="Invalid amount. Please enter a valid number."))
+        
+###########
 @app.route("/cashbook")
 def cashbook():
     if not session.get("is_admin"):
@@ -1098,6 +1100,7 @@ def withdraw_request():
         can_withdraw=can_withdraw_again,
         last_withdrawal=limit_data[0] if limit_data else None)
         
+
 @app.route("/withdrawal_receipt/<receipt_code>")
 def withdrawal_receipt(receipt_code):
     if not session.get('user_id'):
@@ -1223,6 +1226,151 @@ def process_withdrawal():
         conn.rollback()
         logging.error(f"Process withdrawal error: {e}")
         return jsonify({"error": "System error"}), 500
+        
+@app.route("/deposit", methods=["GET", "POST"])
+@limiter.limit("5 per hour")
+def deposit_request():
+    if not session.get('user_id'):
+        return redirect(url_for('login'))
+    
+    user_id = session['user_id']
+    username = session.get('username')
+    
+    if request.method == "POST":
+        try:
+            amount = float(request.form.get('amount', 0))
+            
+            # Validation
+            if amount < 50:
+                return render_template_string(deposit_html, 
+                    error="Minimum deposit amount is KES 50",
+                    can_deposit=True)
+            
+            if amount > 50000:
+                return render_template_string(deposit_html, 
+                    error="Maximum deposit amount is KES 50,000",
+                    can_deposit=True)
+
+            # Generate deposit voucher
+            voucher_code = f"DPT{datetime.now().strftime('%Y%m%d%H%M%S')}{user_id}"
+            
+            with get_db_connection() as conn:
+                cursor = conn.cursor()
+                
+                # Create deposit request
+                cursor.execute("""
+                    INSERT INTO deposit_requests 
+                    (user_id, username, amount, voucher_code, status)
+                    VALUES (%s, %s, %s, %s, 'pending')
+                """, (user_id, username, amount, voucher_code))
+                
+                conn.commit()
+            
+            # Redirect to voucher page
+            return redirect(url_for('deposit_voucher', voucher_code=voucher_code))
+            
+        except ValueError:
+            return render_template_string(deposit_html, 
+                error="Invalid amount format",
+                can_deposit=True)
+        except Exception as e:
+            logging.error(f"Deposit request error: {e}")
+            return render_template_string(deposit_html, 
+                error="System error. Please try again.",
+                can_deposit=True)
+    
+    # GET request - show deposit form
+    return render_template_string(deposit_html, can_deposit=True)
+
+@app.route("/deposit_voucher/<voucher_code>")
+def deposit_voucher(voucher_code):
+    if not session.get('user_id'):
+        return redirect(url_for('login'))
+    
+    with get_db_connection() as conn:
+        cursor = conn.cursor()
+        cursor.execute("""
+            SELECT * FROM deposit_requests 
+            WHERE voucher_code = %s AND user_id = %s
+        """, (voucher_code, session['user_id']))
+        deposit = cursor.fetchone()
+        
+        if not deposit:
+            return redirect(url_for('index', error="Voucher not found"))
+    
+    return render_template_string(deposit_voucher_html, deposit=deposit)
+
+@app.route("/admin/process_deposit", methods=["POST"])
+def process_deposit():
+    if not session.get("is_admin"):
+        return jsonify({"error": "Unauthorized"}), 403
+    
+    deposit_id = request.form.get("deposit_id")
+    action = request.form.get("action")
+    admin_notes = request.form.get("admin_notes", "")
+    
+    if not deposit_id or not action:
+        return jsonify({"error": "Missing parameters"}), 400
+    
+    try:
+        with get_db_connection() as conn:
+            cursor = conn.cursor()
+            
+            cursor.execute("""
+                SELECT user_id, amount, status 
+                FROM deposit_requests 
+                WHERE id = %s
+            """, (deposit_id,))
+            deposit = cursor.fetchone()
+            
+            if not deposit:
+                return jsonify({"error": "Deposit not found"}), 404
+            
+            user_id, amount, current_status = deposit
+            
+            if current_status != 'pending':
+                return jsonify({"error": "Deposit already processed"}), 400
+            
+            admin_id = session.get("admin_id")
+            processed_time = datetime.now()
+            
+            if action == 'approve':
+                # Add funds to user wallet
+                cursor.execute("""
+                    UPDATE users 
+                    SET wallet = wallet + %s 
+                    WHERE id = %s
+                """, (amount, user_id))
+                
+                # Record transaction
+                cursor.execute("""
+                    INSERT INTO transactions (user_id, type, amount, timestamp)
+                    VALUES (%s, 'deposit', %s, %s)
+                """, (user_id, amount, processed_time))
+                
+                # Update deposit request
+                cursor.execute("""
+                    UPDATE deposit_requests 
+                    SET status = 'completed', processed_time = %s, 
+                        processed_by = %s, admin_notes = %s
+                    WHERE id = %s
+                """, (processed_time, admin_id, admin_notes, deposit_id))
+                
+            elif action == 'reject':
+                cursor.execute("""
+                    UPDATE deposit_requests 
+                    SET status = 'rejected', processed_time = %s, 
+                        processed_by = %s, admin_notes = %s
+                    WHERE id = %s
+                """, (processed_time, admin_id, admin_notes, deposit_id))
+            
+            conn.commit()
+            return jsonify({"success": True, "message": f"Deposit {action}ed"})
+            
+    except Exception as e:
+        conn.rollback()
+        logging.error(f"Process deposit error: {e}")
+        return jsonify({"error": "System error"}), 500        
         
 #NON MONETARY ADMIN FUNCTIONS
 ###################
@@ -2265,6 +2413,8 @@ deposit_html = """
 </html>
 """                              
 
+
+
 cashbook_html = """
 <!DOCTYPE html>
 <html lang="en">
@@ -2424,196 +2574,6 @@ cashbook_html = """
 </body>
 </html>
 """
-
-
-@app.route("/deposit", methods=["GET", "POST"])
-@limiter.limit("5 per hour")
-def deposit_request():
-    if not session.get('user_id'):
-        return redirect(url_for('login'))
-    
-    user_id = session['user_id']
-    username = session.get('username')
-    
-    if request.method == "POST":
-        try:
-            amount = float(request.form.get('amount', 0))
-            
-            # Validation
-            if amount < 50:
-                return render_template_string(deposit_html, 
-                    error="Minimum deposit amount is KES 50",
-                    can_deposit=True)
-            
-            if amount > 50000:
-                return render_template_string(deposit_html, 
-                    error="Maximum deposit amount is KES 50,000",
-                    can_deposit=True)
-
-            # Generate deposit voucher
-            voucher_code = f"DPT{datetime.now().strftime('%Y%m%d%H%M%S')}{user_id}"
-            
-            with get_db_connection() as conn:
-                cursor = conn.cursor()
-                
-                # Create deposit request
-                cursor.execute("""
-                    INSERT INTO deposit_requests 
-                    (user_id, username, amount, voucher_code, status)
-                    VALUES (%s, %s, %s, %s, 'pending')
-                """, (user_id, username, amount, voucher_code))
-                
-                conn.commit()
-            
-            # Redirect to voucher page
-            return redirect(url_for('deposit_voucher', voucher_code=voucher_code))
-            
-        except ValueError:
-            return render_template_string(deposit_html, 
-                error="Invalid amount format",
-                can_deposit=True)
-        except Exception as e:
-            logging.error(f"Deposit request error: {e}")
-            return render_template_string(deposit_html, 
-                error="System error. Please try again.",
-                can_deposit=True)
-    
-    # GET request - show deposit form
-    return render_template_string(deposit_html, can_deposit=True)
-
-@app.route("/deposit_voucher/<voucher_code>")
-def deposit_voucher(voucher_code):
-    if not session.get('user_id'):
-        return redirect(url_for('login'))
-    
-    with get_db_connection() as conn:
-        cursor = conn.cursor()
-        cursor.execute("""
-            SELECT * FROM deposit_requests 
-            WHERE voucher_code = %s AND user_id = %s
-        """, (voucher_code, session['user_id']))
-        deposit = cursor.fetchone()
-        
-        if not deposit:
-            return redirect(url_for('index', error="Voucher not found"))
-    
-    return render_template_string(deposit_voucher_html, deposit=deposit)
-
-@app.route("/withdrawal_receipt/<receipt_code>")
-def withdrawal_receipt(receipt_code):
-    if not session.get('user_id'):
-        return redirect(url_for('login'))
-    
-    with get_db_connection() as conn:
-        cursor = conn.cursor()
-        cursor.execute("""
-            SELECT wr.*, u.email
-            FROM withdrawal_requests wr
-            JOIN users u ON wr.user_id = u.id
-            WHERE wr.receipt_code = %s AND wr.user_id = %s
-        """, (receipt_code, session['user_id']))
-        withdrawal = cursor.fetchone()
-        
-        if not withdrawal:
-            return redirect(url_for('index', error="Receipt not found"))
-    
-    return render_template_string(withdrawal_receipt_html, withdrawal=withdrawal)
-
-@app.route("/admin/deposits")
-def admin_deposits():
-    if not session.get("is_admin"):
-        return redirect(url_for("admin_login", error="Unauthorized access."))
-    
-    with get_db_connection() as conn:
-        cursor = conn.cursor()
-        
-        cursor.execute("""
-            SELECT dr.*, u.email
-            FROM deposit_requests dr
-            JOIN users u ON dr.user_id = u.id
-            ORDER BY dr.request_time DESC
-            LIMIT 100
-        """)
-        deposits = cursor.fetchall()
-        
-        cursor.execute("SELECT COUNT(*) FROM deposit_requests WHERE status = 'pending'")
-        pending_count = cursor.fetchone()[0]
-    
-    return render_template_string(admin_deposits_html, 
-        deposits=deposits, 
-        pending_count=pending_count)
-
-@app.route("/admin/process_deposit", methods=["POST"])
-def process_deposit():
-    if not session.get("is_admin"):
-        return jsonify({"error": "Unauthorized"}), 403
-    
-    deposit_id = request.form.get("deposit_id")
-    action = request.form.get("action")
-    admin_notes = request.form.get("admin_notes", "")
-    
-    if not deposit_id or not action:
-        return jsonify({"error": "Missing parameters"}), 400
-    
-    try:
-        with get_db_connection() as conn:
-            cursor = conn.cursor()
-            
-            cursor.execute("""
-                SELECT user_id, amount, status 
-                FROM deposit_requests 
-                WHERE id = %s
-            """, (deposit_id,))
-            deposit = cursor.fetchone()
-            
-            if not deposit:
-                return jsonify({"error": "Deposit not found"}), 404
-            
-            user_id, amount, current_status = deposit
-            
-            if current_status != 'pending':
-                return jsonify({"error": "Deposit already processed"}), 400
-            
-            admin_id = session.get("admin_id")
-            processed_time = datetime.now()
-            
-            if action == 'approve':
-                # Add funds to user wallet
-                cursor.execute("""
-                    UPDATE users 
-                    SET wallet = wallet + %s 
-                    WHERE id = %s
-                """, (amount, user_id))
-                
-                # Record transaction
-                cursor.execute("""
-                    INSERT INTO transactions (user_id, type, amount, timestamp)
-                    VALUES (%s, 'deposit', %s, %s)
-                """, (user_id, amount, processed_time))
-                
-                # Update deposit request
-                cursor.execute("""
-                    UPDATE deposit_requests 
-                    SET status = 'completed', processed_time = %s, 
-                        processed_by = %s, admin_notes = %s
-                    WHERE id = %s
-                """, (processed_time, admin_id, admin_notes, deposit_id))
-                
-            elif action == 'reject':
-                cursor.execute("""
-                    UPDATE deposit_requests 
-                    SET status = 'rejected', processed_time = %s, 
-                        processed_by = %s, admin_notes = %s
-                    WHERE id = %s
-                """, (processed_time, admin_id, admin_notes, deposit_id))
-            
-            conn.commit()
-            return jsonify({"success": True, "message": f"Deposit {action}ed"})
-            
-    except Exception as e:
-        conn.rollback()
-        logging.error(f"Process deposit error: {e}")
-        return jsonify({"error": "System error"}), 500
 
 base_html = """
 <!DOCTYPE html>
