@@ -1,3 +1,4 @@
+#Iam forcing a new edition.
 import os
 import json
 import random
@@ -2569,28 +2570,28 @@ base_html = """
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />  
     <title>HARAMBEE CASH - Play & Win Big!</title>  
     <link rel="manifest" href="{{ url_for('static', filename='manifest.json') }}" />  
-    <meta name="theme-color" content="#4A90E2" />  
+    <meta name="theme-color" content="#FF007F" />  
     <link rel="icon" type="image/png" href="{{ url_for('static', filename='favicon.ico') }}" />  
     <link rel="apple-touch-icon" href="{{ url_for('static', filename='apple-touch-icon.png') }}" />  
     <meta name="description" content="Harambee Cash - Play exciting games and win big prizes. Join our community gaming platform today!" />
     <meta name="keywords" content="gaming, cash prizes, harambee, win money, online games" />
     <style>  
         :root {
-            --skyblue-primary: #4A90E2;
-            --skyblue-secondary: #87CEEB;
-            --skyblue-light: #B0E2FF;
-            --skyblue-dark: #1E6FB9;
-            --skyblue-accent: #63B3ED;
-            --skyblue-gradient: linear-gradient(135deg, #4A90E2 0%, #87CEEB 50%, #B0E2FF 100%);
-            --skyblue-gradient-reverse: linear-gradient(135deg, #B0E2FF 0%, #87CEEB 50%, #4A90E2 100%);
-            --skyblue-gradient-subtle: linear-gradient(135deg, rgba(74, 144, 226, 0.1) 0%, rgba(135, 206, 235, 0.1) 100%);
-            --light-bg: #F0F8FF;
+            --skyblue-primary: #FF007F;
+            --skyblue-secondary: #FF66A3;
+            --skyblue-light: #FFC0DE;
+            --skyblue-dark: #990044;
+            --skyblue-accent: #FF4C9A;
+            --skyblue-gradient: linear-gradient(135deg, #FF007F 0%, #FF66A3 50%, #FFC0DE 100%);
+            --skyblue-gradient-reverse: linear-gradient(135deg, #FFC0DE 0%, #FF66A3 50%, #FF007F 100%);
+            --skyblue-gradient-subtle: linear-gradient(135deg, rgba(255, 0, 127, 0.08) 0%, rgba(255, 102, 163, 0.08) 100%);
+            --light-bg: #FFF5F8;
             --light-card: #FFFFFF;
-            --text-dark: #2D3748;
-            --text-skyblue: #4A90E2;
-            --text-muted: #718096;
-            --shadow: 0 8px 30px rgba(74, 144, 226, 0.15);
-            --shadow-hover: 0 15px 40px rgba(74, 144, 226, 0.25);
+            --text-dark: #2D1A23;
+            --text-skyblue: #FF007F;
+            --text-muted: #7A5E68;
+            --shadow: 0 8px 30px rgba(255, 0, 127, 0.15);
+            --shadow-hover: 0 15px 40px rgba(255, 0, 127, 0.25);
             --radius: 20px;
             --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
             --success: #00C9B1;
@@ -2629,7 +2630,7 @@ base_html = """
             box-shadow: var(--shadow);
             position: relative;
             margin: 20px;
-            border: 1px solid rgba(74, 144, 226, 0.2);
+            border: 1px solid rgba(255, 0, 127, 0.12);
             transition: var(--transition);
             overflow: hidden;
         }
@@ -2648,6 +2649,7 @@ base_html = """
         .logo-container {
             margin-bottom: 25px;
             position: relative;
+            z-index: 2;
         }
 
         .logo {
@@ -2693,7 +2695,7 @@ base_html = """
             font-size: 2rem;
             font-weight: 800;
             color: var(--text-dark);
-            text-shadow: 1px 1px 2px rgba(0,0,0,0.1);
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.06);
         }
 
         h1 {
@@ -2703,9 +2705,10 @@ base_html = """
             -webkit-background-clip: text;
             background-clip: text;
             color: transparent;
-            text-shadow: 0 0 20px rgba(74, 144, 226, 0.2);
+            text-shadow: 0 0 20px rgba(255, 0, 127, 0.15);
             font-weight: 800;
             letter-spacing: 1px;
+            z-index: 2;
         }
 
         .tagline {
@@ -2718,7 +2721,7 @@ base_html = """
 
         .balance-display {
             background: var(--skyblue-gradient-subtle);
-            border: 1px solid rgba(74, 144, 226, 0.3);
+            border: 1px solid rgba(255, 0, 127, 0.12);
             border-radius: var(--radius);
             padding: 20px;
             margin: 25px auto;
@@ -2743,7 +2746,7 @@ base_html = """
             font-size: 2.2rem;
             font-weight: 700;
             color: var(--skyblue-primary);
-            text-shadow: 0 0 10px rgba(74, 144, 226, 0.2);
+            text-shadow: 0 0 10px rgba(255, 0, 127, 0.18);
         }
 
         .welcome-section {
@@ -2751,7 +2754,7 @@ base_html = """
             padding: 25px;
             background: var(--skyblue-gradient-subtle);
             border-radius: var(--radius);
-            border: 1px solid rgba(74, 144, 226, 0.2);
+            border: 1px solid rgba(255, 0, 127, 0.12);
         }
 
         .welcome-section h2 {
@@ -2812,7 +2815,7 @@ base_html = """
 
         .feature-card {
             background: var(--skyblue-gradient-subtle);
-            border: 1px solid rgba(74, 144, 226, 0.2);
+            border: 1px solid rgba(255, 0, 127, 0.08);
             border-radius: var(--radius);
             padding: 20px 15px;
             transition: var(--transition);
@@ -2821,7 +2824,7 @@ base_html = """
         .feature-card:hover {
             transform: translateY(-5px);
             box-shadow: var(--shadow);
-            border-color: rgba(74, 144, 226, 0.4);
+            border-color: rgba(255, 0, 127, 0.18);
         }
 
         .feature-icon {
@@ -2845,7 +2848,7 @@ base_html = """
         .footer {
             margin-top: 30px;
             padding-top: 20px;
-            border-top: 1px solid rgba(74, 144, 226, 0.2);
+            border-top: 1px solid rgba(255, 0, 127, 0.08);
             color: var(--text-muted);
             font-size: 0.9rem;
         }
@@ -2859,10 +2862,9 @@ base_html = """
         }
 
         .glow-effect {
-            text-shadow: 0 0 10px rgba(74, 144, 226, 0.4);
+            text-shadow: 0 0 10px rgba(255, 0, 127, 0.2);
         }
 
-        /* Error and Message Styles */
         .error {
             background: rgba(255, 107, 53, 0.1);
             border: 1px solid var(--error);
@@ -2890,24 +2892,22 @@ base_html = """
             margin: 15px 0;
         }
 
-        /* Game Results Styles */
         .game-window {
             margin: 30px 0;
             padding: 25px;
             background: var(--skyblue-gradient-subtle);
             border-radius: var(--radius);
-            border: 1px solid rgba(74, 144, 226, 0.2);
+            border: 1px solid rgba(255, 0, 127, 0.08);
         }
 
         .game-result {
-            background: rgba(255, 255, 255, 0.7);
+            background: rgba(255, 255, 255, 0.85);
             border-radius: var(--radius);
             padding: 15px;
             margin: 15px 0;
             border-left: 4px solid var(--skyblue-primary);
         }
 
-        /* Enrollment Status */
         .enrollment-status {
             background: rgba(0, 201, 177, 0.1);
             border: 1px solid var(--success);
@@ -2918,19 +2918,17 @@ base_html = """
             animation: pulse 2s infinite;
         }
 
-        /* Loading Spinner */
         .loading-spinner {
             display: inline-block;
             width: 20px;
             height: 20px;
-            border: 3px solid rgba(74, 144, 226, 0.3);
+            border: 3px solid rgba(255, 0, 127, 0.18);
             border-radius: 50%;
             border-top-color: var(--skyblue-primary);
             animation: spin 1s ease-in-out infinite;
             margin-right: 10px;
         }
 
-        /* Offline Styles */
         .offline-banner {
             background: rgba(255, 107, 53, 0.1);
             border: 1px solid var(--error);
@@ -2942,7 +2940,7 @@ base_html = """
 
         .offline-btn {
             background: var(--skyblue-gradient-subtle);
-            border: 1px solid rgba(74, 144, 226, 0.3);
+            border: 1px solid rgba(255, 0, 127, 0.08);
             color: var(--text-skyblue);
             padding: 12px 20px;
             border-radius: var(--radius);
@@ -2956,10 +2954,9 @@ base_html = """
             color: white;
         }
 
-        /* Trivia Styles */
         .trivia-option {
             background: var(--skyblue-gradient-subtle);
-            border: 1px solid rgba(74, 144, 226, 0.3);
+            border: 1px solid rgba(255, 0, 127, 0.08);
             padding: 15px;
             margin: 10px 0;
             border-radius: var(--radius);
@@ -2968,7 +2965,7 @@ base_html = """
         }
 
         .trivia-option:hover {
-            background: rgba(74, 144, 226, 0.15);
+            background: rgba(255, 0, 127, 0.06);
         }
 
         .trivia-correct {
@@ -2981,7 +2978,6 @@ base_html = """
             border-color: var(--error);
         }
 
-        /* Achievement Notification */
         .achievement-notification {
             position: fixed;
             top: 20px;
@@ -2995,7 +2991,6 @@ base_html = """
             animation: slideInRight 0.5s ease-out;
         }
 
-        /* Game Animation */
         .game-animation {
             position: fixed;
             top: 0;
@@ -3025,7 +3020,7 @@ base_html = """
         .animation-text {
             font-size: 2rem;
             font-weight: bold;
-            text-shadow: 0 0 10px rgba(74, 144, 226, 0.4);
+            text-shadow: 0 0 10px rgba(255, 0, 127, 0.18);
         }
 
         .rocket, .confetti {
@@ -3042,7 +3037,6 @@ base_html = """
             background: var(--skyblue-gradient);
         }
 
-        /* Social Icons */
         .socials {
             display: flex;
             justify-content: center;
@@ -3071,7 +3065,6 @@ base_html = """
             height: 20px;
         }
 
-        /* Install Button */
         #install-btn {
             position: fixed;
             top: 20px;
@@ -3088,7 +3081,6 @@ base_html = """
             font-weight: 600;
         }
 
-        /* Animations */
         @keyframes spin {
             to { transform: rotate(360deg); }
         }
@@ -3133,19 +3125,18 @@ base_html = """
     </style>
 </head>
 <body>
-    <button id="install-btn">📱 Install App</button>
+    <button id="install-btn">📱 Install App</button> 
 
     <div class="container">
         <div class="logo-container">
             <div class="logo">
-                <!-- ✅ Fixed logo section - preserves original colors -->
                 <img src="{{ url_for('static', filename='piclog.png') }}" 
                      alt="Harambee Cash Logo" 
                      class="harambee-logo">
             </div>
                  
             <h1>HARAMBEE CASH</h1>
-            <p class="tagline">Play & Win Big with Sky High Opportunities!</p>
+            <p class="tagline">Play & Win Big with Golden Opportunities!</p>
         </div>
 
         <p id="timestamp-display">Loading time...</p>
@@ -3156,7 +3147,7 @@ base_html = """
 
         {% if not session.get('user_id') %}
             <div class="welcome-section">
-                <h2>Welcome to <span class="skyblue-text">Harambee Cash</span></h2>
+                <h2>Welcome to <span class="gold-text">Harambee Cash</span></h2>
                 <p>Join our exciting gaming platform where you can play and win real prizes!</p>
                 
                 <div style="text-align: center; margin: 25px 0;">
@@ -3165,7 +3156,7 @@ base_html = """
                         <button class="cta-button">Create Account</button>
                     </a>
                     <a href="/login" style="display: inline-block; margin: 10px;">
-                        <button class="cta-button" style="background: var(--skyblue-gradient-reverse);">Login</button>
+                        <button class="cta-button" style="background: var(--gold-gradient-reverse);">Login</button>
                     </a>
                 </div>
 
@@ -3201,7 +3192,7 @@ base_html = """
                 </ul>
             </div>
         {% else %}
-            <p style="font-size: 1.3rem; color: var(--text-skyblue); font-weight: 700;">Welcome back, {{ session.get('username') }}! 👋</p>  
+            <p style="font-size: 1.3rem; color: var(--text-gold); font-weight: 700;">Welcome back, {{ session.get('username') }}! 👋</p>  
             <div class="balance-display">
                 <div class="balance-label">Your Wallet Balance</div>
                 <div class="balance-amount">Ksh. {{ wallet_balance | default(0.0) | float | round(2) }}</div>
