@@ -104,7 +104,7 @@ def init_db():
                 ip_address TEXT,
                 user_agent TEXT,
                 referrer TEXT,
-                path TEXT,
+                path TEXT,  -- This should be 'path' not 'page'
                 timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
         """)
@@ -283,9 +283,8 @@ def log_transaction(user_id, transaction_type, amount):
             conn.commit()
     except Exception as e:
         logging.error(f"Error in log_transaction(): {e}")
-
-# --- Logging visitors / activity ---
-def log_visit_entry(ip_address, user_agent, referrer=None, page=None, timestamp=None):
+        
+def log_visit_entry(ip_address, user_agent, referrer=None, path=None, timestamp=None):
     # Ensure timestamp is always a string
     if timestamp is None:
         ts = datetime.now().strftime("%Y-%m-%d %H:%M:%S.%f")
@@ -294,14 +293,15 @@ def log_visit_entry(ip_address, user_agent, referrer=None, page=None, timestamp=
     else:
         ts = str(timestamp)
 
-    # Insert visit log into the database
+    # Insert visit log into the database - FIXED: use 'path' instead of 'page'
     with get_db_connection() as conn:
         cursor = conn.cursor()
         cursor.execute("""
-            INSERT INTO visit_logs (ip_address, user_agent, referrer, page, timestamp)
+            INSERT INTO visit_logs (ip_address, user_agent, referrer, path, timestamp)
             VALUES (%s, %s, %s, %s, %s)
-        """, (ip_address, user_agent, referrer, page, ts))
-        conn.commit()
+        """, (ip_address, user_agent, referrer, path, ts))
+        conn.commit()        
+        
 
 @app.before_request
 def log_user_activity():
@@ -599,10 +599,15 @@ def game_data():
                 for game in completed_games
             ]
 
-            # Check if current user is queued using your game_queue table
+            # FIXED: Check if current user is queued for CURRENT game (last 35 seconds)
             current_user_queued = False
             if session.get('user_id'):
-                cursor.execute("SELECT COUNT(*) FROM game_queue WHERE user_id = %s", (session['user_id'],))
+                cursor.execute("""
+                    SELECT COUNT(*) 
+                    FROM game_queue 
+                    WHERE user_id = %s 
+                    AND timestamp >= NOW() - INTERVAL '35 seconds'
+                """, (session['user_id'],))
                 current_user_queued = cursor.fetchone()[0] > 0
 
         response_data = {
@@ -628,7 +633,7 @@ def game_data():
         }), 500
 
 @app.route("/play", methods=["POST"])
-@limiter.limit("3 per minute")
+@limiter.limit("3 per minute; 1 per 10 seconds", key_func=lambda: f"{session.get('user_id')}_{get_remote_address()}")
 def play():
     user_id = session.get("user_id")
     if not user_id:
@@ -639,34 +644,43 @@ def play():
         return redirect(url_for("index", error="Insufficient funds. Please deposit."))
 
     conn = None 
-
     try:
         with get_db_connection() as conn:
             cursor = conn.cursor()
 
-            # Check if user is already in queue
-            cursor.execute("SELECT user_id FROM game_queue WHERE user_id = %s", (user_id,))
+            # Check if user is already in queue for CURRENT game
+            cursor.execute("""
+                SELECT gq.user_id 
+                FROM game_queue gq 
+                JOIN results r ON gq.timestamp >= NOW() - INTERVAL '35 seconds'
+                WHERE gq.user_id = %s
+                LIMIT 1
+            """, (user_id,))
             if cursor.fetchone():
                 return redirect(url_for("index", message="Already enrolled in current game"))
 
-            # DEDUCTION: Use your existing column name (you're using 'wallet')
-            cursor.execute("UPDATE users SET wallet = wallet - 1.0 WHERE id = %s", (user_id,))
+            # DEDUCTION: Deduct 1 unit from wallet
+            cursor.execute("UPDATE users SET wallet = wallet - 1.0 WHERE id = %s AND wallet >= 1.0", (user_id,))
             
             # Verify deduction was successful
             if cursor.rowcount == 0:
-                return redirect(url_for("index", error="Deduction failed. Please try again."))
+                return redirect(url_for("index", error="Deduction failed. Insufficient balance."))
             
-            # Record transaction (your existing code)
-            cursor.execute("INSERT INTO transactions (user_id, type, amount, timestamp) VALUES (%s, 'game_entry', %s, %s)",
-                          (user_id, -1.0, get_timestamp()))
+            # Record transaction
+            cursor.execute("""
+                INSERT INTO transactions (user_id, type, amount, timestamp)
+                VALUES (%s, 'game_entry', %s, %s)
+            """, (user_id, -1.0, get_timestamp()))
             
-            # Add to game queue (your existing code)
-            cursor.execute("INSERT INTO game_queue (user_id, timestamp) VALUES (%s, %s)",
-                          (user_id, get_timestamp()))
+            # Add to game queue
+            cursor.execute("""
+                INSERT INTO game_queue (user_id, timestamp)
+                VALUES (%s, %s)
+            """, (user_id, get_timestamp()))
+            
             conn.commit()
 
-            # Return the EXACT success message frontend expects
-            return redirect(url_for("index", message="Successfully enrolled in the next game!"))
+            return redirect(url_for("index", message="Successfully enrolled in the next game! Ksh. 1.00 deducted."))
 
     except psycopg2.IntegrityError:
         if conn:
@@ -2386,8 +2400,6 @@ deposit_html = """
 </html>
 """                              
 
-
-
 cashbook_html = """
 <!DOCTYPE html>
 <html lang="en">
@@ -3113,7 +3125,7 @@ base_html = """
     <div class="container">
         <div class="logo-container">
             <div class="logo">
-                <div class="logo-text">HC</div>
+                <img src="{{ url_for('static', filename='piclog.png') }}" alt="Harambee Cash Logo" class="site-logo">
             </div>
             <h1>HARAMBEE CASH</h1>
             <p class="tagline">Play & Win Big with Golden Opportunities!</p>
@@ -4020,7 +4032,9 @@ base_html = """
                         });
 
                         if (data.current_user_queued) {
-                            submissionProtector.handleSubmissionSuccess('✅ Already enrolled in current game');
+                            submissionProtector.handleSubmissionSuccess('✅ Already  enrolled in current game');
+                        } else {
+    submissionProtector.resetState();
                         }
                     })
                     .catch(error => {
