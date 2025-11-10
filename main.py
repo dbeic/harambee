@@ -1,4 +1,4 @@
-#Iam forcing a new edition.
+#Reverted to 2
 import os
 import json
 import random
@@ -2570,28 +2570,28 @@ base_html = """
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />  
     <title>HARAMBEE CASH - Play & Win Big!</title>  
     <link rel="manifest" href="{{ url_for('static', filename='manifest.json') }}" />  
-    <meta name="theme-color" content="#FF007F" />  
+    <meta name="theme-color" content="#D4AF37" />  
     <link rel="icon" type="image/png" href="{{ url_for('static', filename='favicon.ico') }}" />  
     <link rel="apple-touch-icon" href="{{ url_for('static', filename='apple-touch-icon.png') }}" />  
     <meta name="description" content="Harambee Cash - Play exciting games and win big prizes. Join our community gaming platform today!" />
     <meta name="keywords" content="gaming, cash prizes, harambee, win money, online games" />
     <style>  
         :root {
-            --skyblue-primary: #FF007F;
-            --skyblue-secondary: #FF66A3;
-            --skyblue-light: #FFC0DE;
-            --skyblue-dark: #990044;
-            --skyblue-accent: #FF4C9A;
-            --skyblue-gradient: linear-gradient(135deg, #FF007F 0%, #FF66A3 50%, #FFC0DE 100%);
-            --skyblue-gradient-reverse: linear-gradient(135deg, #FFC0DE 0%, #FF66A3 50%, #FF007F 100%);
-            --skyblue-gradient-subtle: linear-gradient(135deg, rgba(255, 0, 127, 0.08) 0%, rgba(255, 102, 163, 0.08) 100%);
-            --light-bg: #FFF5F8;
-            --light-card: #FFFFFF;
-            --text-dark: #2D1A23;
-            --text-skyblue: #FF007F;
-            --text-muted: #7A5E68;
-            --shadow: 0 8px 30px rgba(255, 0, 127, 0.15);
-            --shadow-hover: 0 15px 40px rgba(255, 0, 127, 0.25);
+            --gold-primary: #D4AF37;
+            --gold-secondary: #FFD700;
+            --gold-light: #F7EF8A;
+            --gold-dark: #B8860B;
+            --gold-accent: #FFC125;
+            --gold-gradient: linear-gradient(135deg, #D4AF37 0%, #FFD700 50%, #F7EF8A 100%);
+            --gold-gradient-reverse: linear-gradient(135deg, #F7EF8A 0%, #FFD700 50%, #D4AF37 100%);
+            --gold-gradient-subtle: linear-gradient(135deg, rgba(212, 175, 55, 0.1) 0%, rgba(255, 215, 0, 0.1) 100%);
+            --dark-bg: #1A1A1A;
+            --dark-card: #2D2D2D;
+            --text-light: #FFFFFF;
+            --text-gold: #FFD700;
+            --text-muted: #CCCCCC;
+            --shadow: 0 8px 30px rgba(212, 175, 55, 0.15);
+            --shadow-hover: 0 15px 40px rgba(212, 175, 55, 0.25);
             --radius: 20px;
             --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
             --success: #00C9B1;
@@ -2609,19 +2609,19 @@ base_html = """
             font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
             margin: 0;
             padding: 0;
-            background: var(--light-bg);
+            background: var(--dark-bg);
             background-attachment: fixed;
             display: flex;
             align-items: center;
             justify-content: center;
             min-height: 100vh;
-            color: var(--text-dark);
+            color: var(--text-light);
             text-align: center;
             line-height: 1.6;
         }
 
         .container {
-            background: var(--light-card);
+            background: var(--dark-card);
             backdrop-filter: blur(20px);
             padding: 40px 30px;
             border-radius: var(--radius);
@@ -2630,7 +2630,7 @@ base_html = """
             box-shadow: var(--shadow);
             position: relative;
             margin: 20px;
-            border: 1px solid rgba(255, 0, 127, 0.12);
+            border: 1px solid rgba(212, 175, 55, 0.2);
             transition: var(--transition);
             overflow: hidden;
         }
@@ -2642,30 +2642,28 @@ base_html = """
             left: 0;
             right: 0;
             height: 4px;
-            background: var(--skyblue-gradient);
+            background: var(--gold-gradient);
             z-index: 1;
         }
 
         .logo-container {
             margin-bottom: 25px;
             position: relative;
-            z-index: 2;
         }
 
         .logo {
             width: 120px;
             height: 120px;
-            background: var(--light-card);
+            background: var(--gold-gradient);
             border-radius: 50%;
             display: flex;
             align-items: center;
             justify-content: center;
             margin: 0 auto 15px;
             box-shadow: var(--shadow);
-            border: 4px solid var(--skyblue-light);
+            border: 4px solid var(--gold-dark);
             position: relative;
             overflow: hidden;
-            padding: 5px;
         }
 
         .logo::after {
@@ -2675,53 +2673,43 @@ base_html = """
             left: -10px;
             right: -10px;
             bottom: -10px;
-            background: var(--skyblue-gradient);
+            background: var(--gold-gradient);
             border-radius: 50%;
             z-index: -1;
-            opacity: 0.3;
+            opacity: 0.5;
             filter: blur(15px);
-        }
-
-        .harambee-logo {
-            width: 100%;
-            height: auto;
-            display: block;
-            border-radius: 50%;
-            object-fit: contain;
-            background: transparent;
         }
 
         .logo-text {
             font-size: 2rem;
             font-weight: 800;
-            color: var(--text-dark);
-            text-shadow: 1px 1px 2px rgba(0,0,0,0.06);
+            color: var(--dark-bg);
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.2);
         }
 
         h1 {
             font-size: 2.8rem;
             margin-bottom: 20px;
-            background: var(--skyblue-gradient);
+            background: var(--gold-gradient);
             -webkit-background-clip: text;
             background-clip: text;
             color: transparent;
-            text-shadow: 0 0 20px rgba(255, 0, 127, 0.15);
+            text-shadow: 0 0 20px rgba(212, 175, 55, 0.3);
             font-weight: 800;
             letter-spacing: 1px;
-            z-index: 2;
         }
 
         .tagline {
             font-size: 1.3rem;
             margin-bottom: 30px;
-            color: var(--text-skyblue);
+            color: var(--text-gold);
             font-weight: 500;
             letter-spacing: 0.5px;
         }
 
         .balance-display {
-            background: var(--skyblue-gradient-subtle);
-            border: 1px solid rgba(255, 0, 127, 0.12);
+            background: var(--gold-gradient-subtle);
+            border: 1px solid rgba(212, 175, 55, 0.3);
             border-radius: var(--radius);
             padding: 20px;
             margin: 25px auto;
@@ -2745,29 +2733,29 @@ base_html = """
         .balance-amount {
             font-size: 2.2rem;
             font-weight: 700;
-            color: var(--skyblue-primary);
-            text-shadow: 0 0 10px rgba(255, 0, 127, 0.18);
+            color: var(--gold-secondary);
+            text-shadow: 0 0 10px rgba(255, 215, 0, 0.3);
         }
 
         .welcome-section {
             margin: 30px 0;
             padding: 25px;
-            background: var(--skyblue-gradient-subtle);
+            background: var(--gold-gradient-subtle);
             border-radius: var(--radius);
-            border: 1px solid rgba(255, 0, 127, 0.12);
+            border: 1px solid rgba(212, 175, 55, 0.2);
         }
 
         .welcome-section h2 {
             font-size: 1.8rem;
             margin-bottom: 15px;
-            color: var(--text-skyblue);
+            color: var(--text-gold);
             font-weight: 700;
         }
 
         .welcome-section h3 {
             font-size: 1.5rem;
             margin: 20px 0 10px;
-            color: var(--skyblue-dark);
+            color: var(--gold-light);
             font-weight: 600;
         }
 
@@ -2779,8 +2767,8 @@ base_html = """
         }
 
         .cta-button {
-            background: var(--skyblue-gradient);
-            color: white;
+            background: var(--gold-gradient);
+            color: var(--dark-bg);
             border: none;
             padding: 15px 40px;
             font-size: 1.2rem;
@@ -2797,7 +2785,7 @@ base_html = """
         .cta-button:hover {
             transform: translateY(-3px);
             box-shadow: var(--shadow-hover);
-            background: var(--skyblue-gradient-reverse);
+            background: var(--gold-gradient-reverse);
         }
 
         .cta-button:disabled {
@@ -2814,8 +2802,8 @@ base_html = """
         }
 
         .feature-card {
-            background: var(--skyblue-gradient-subtle);
-            border: 1px solid rgba(255, 0, 127, 0.08);
+            background: var(--gold-gradient-subtle);
+            border: 1px solid rgba(212, 175, 55, 0.2);
             border-radius: var(--radius);
             padding: 20px 15px;
             transition: var(--transition);
@@ -2824,20 +2812,20 @@ base_html = """
         .feature-card:hover {
             transform: translateY(-5px);
             box-shadow: var(--shadow);
-            border-color: rgba(255, 0, 127, 0.18);
+            border-color: rgba(212, 175, 55, 0.4);
         }
 
         .feature-icon {
             font-size: 2.5rem;
             margin-bottom: 15px;
-            color: var(--skyblue-primary);
+            color: var(--gold-secondary);
         }
 
         .feature-title {
             font-size: 1.2rem;
             font-weight: 600;
             margin-bottom: 10px;
-            color: var(--text-skyblue);
+            color: var(--text-gold);
         }
 
         .feature-desc {
@@ -2848,13 +2836,13 @@ base_html = """
         .footer {
             margin-top: 30px;
             padding-top: 20px;
-            border-top: 1px solid rgba(255, 0, 127, 0.08);
+            border-top: 1px solid rgba(212, 175, 55, 0.2);
             color: var(--text-muted);
             font-size: 0.9rem;
         }
 
-        .skyblue-text {
-            background: var(--skyblue-gradient);
+        .gold-text {
+            background: var(--gold-gradient);
             -webkit-background-clip: text;
             background-clip: text;
             color: transparent;
@@ -2862,9 +2850,10 @@ base_html = """
         }
 
         .glow-effect {
-            text-shadow: 0 0 10px rgba(255, 0, 127, 0.2);
+            text-shadow: 0 0 10px rgba(255, 215, 0, 0.5);
         }
 
+        /* Error and Message Styles */
         .error {
             background: rgba(255, 107, 53, 0.1);
             border: 1px solid var(--error);
@@ -2892,22 +2881,24 @@ base_html = """
             margin: 15px 0;
         }
 
+        /* Game Results Styles */
         .game-window {
             margin: 30px 0;
             padding: 25px;
-            background: var(--skyblue-gradient-subtle);
+            background: var(--gold-gradient-subtle);
             border-radius: var(--radius);
-            border: 1px solid rgba(255, 0, 127, 0.08);
+            border: 1px solid rgba(212, 175, 55, 0.2);
         }
 
         .game-result {
-            background: rgba(255, 255, 255, 0.85);
+            background: rgba(0, 0, 0, 0.3);
             border-radius: var(--radius);
             padding: 15px;
             margin: 15px 0;
-            border-left: 4px solid var(--skyblue-primary);
+            border-left: 4px solid var(--gold-primary);
         }
 
+        /* Enrollment Status */
         .enrollment-status {
             background: rgba(0, 201, 177, 0.1);
             border: 1px solid var(--success);
@@ -2918,17 +2909,19 @@ base_html = """
             animation: pulse 2s infinite;
         }
 
+        /* Loading Spinner */
         .loading-spinner {
             display: inline-block;
             width: 20px;
             height: 20px;
-            border: 3px solid rgba(255, 0, 127, 0.18);
+            border: 3px solid rgba(255, 255, 255, 0.3);
             border-radius: 50%;
-            border-top-color: var(--skyblue-primary);
+            border-top-color: var(--gold-primary);
             animation: spin 1s ease-in-out infinite;
             margin-right: 10px;
         }
 
+        /* Offline Styles */
         .offline-banner {
             background: rgba(255, 107, 53, 0.1);
             border: 1px solid var(--error);
@@ -2939,9 +2932,9 @@ base_html = """
         }
 
         .offline-btn {
-            background: var(--skyblue-gradient-subtle);
-            border: 1px solid rgba(255, 0, 127, 0.08);
-            color: var(--text-skyblue);
+            background: var(--gold-gradient-subtle);
+            border: 1px solid rgba(212, 175, 55, 0.3);
+            color: var(--text-gold);
             padding: 12px 20px;
             border-radius: var(--radius);
             margin: 10px;
@@ -2950,13 +2943,14 @@ base_html = """
         }
 
         .offline-btn:hover {
-            background: var(--skyblue-gradient);
-            color: white;
+            background: var(--gold-gradient);
+            color: var(--dark-bg);
         }
 
+        /* Trivia Styles */
         .trivia-option {
-            background: var(--skyblue-gradient-subtle);
-            border: 1px solid rgba(255, 0, 127, 0.08);
+            background: var(--gold-gradient-subtle);
+            border: 1px solid rgba(212, 175, 55, 0.3);
             padding: 15px;
             margin: 10px 0;
             border-radius: var(--radius);
@@ -2965,7 +2959,7 @@ base_html = """
         }
 
         .trivia-option:hover {
-            background: rgba(255, 0, 127, 0.06);
+            background: rgba(212, 175, 55, 0.2);
         }
 
         .trivia-correct {
@@ -2978,12 +2972,13 @@ base_html = """
             border-color: var(--error);
         }
 
+        /* Achievement Notification */
         .achievement-notification {
             position: fixed;
             top: 20px;
             right: 20px;
-            background: var(--skyblue-gradient);
-            color: white;
+            background: var(--gold-gradient);
+            color: var(--dark-bg);
             padding: 20px;
             border-radius: var(--radius);
             box-shadow: var(--shadow-hover);
@@ -2991,13 +2986,14 @@ base_html = """
             animation: slideInRight 0.5s ease-out;
         }
 
+        /* Game Animation */
         .game-animation {
             position: fixed;
             top: 0;
             left: 0;
             width: 100%;
             height: 100%;
-            background: rgba(255, 255, 255, 0.95);
+            background: rgba(0, 0, 0, 0.8);
             display: none;
             justify-content: center;
             align-items: center;
@@ -3007,36 +3003,34 @@ base_html = """
 
         .animation-content {
             text-align: center;
-            color: var(--text-dark);
+            color: white;
         }
 
         .animated-image {
             font-size: 8rem;
             margin-bottom: 20px;
             animation: bounce 1s infinite;
-            color: var(--skyblue-primary);
         }
 
         .animation-text {
             font-size: 2rem;
             font-weight: bold;
-            text-shadow: 0 0 10px rgba(255, 0, 127, 0.18);
+            text-shadow: 0 0 10px rgba(255, 215, 0, 0.8);
         }
 
         .rocket, .confetti {
             position: absolute;
             font-size: 2rem;
             animation: floatUp 2s ease-out forwards;
-            color: var(--skyblue-primary);
         }
 
         .confetti {
             width: 10px;
             height: 10px;
             border-radius: 2px;
-            background: var(--skyblue-gradient);
         }
 
+        /* Social Icons */
         .socials {
             display: flex;
             justify-content: center;
@@ -3050,14 +3044,14 @@ base_html = """
             display: flex;
             align-items: center;
             justify-content: center;
-            background: var(--skyblue-gradient-subtle);
+            background: var(--gold-gradient-subtle);
             border-radius: 50%;
             transition: var(--transition);
         }
 
         .social-icon:hover {
             transform: translateY(-3px);
-            background: var(--skyblue-gradient);
+            background: var(--gold-gradient);
         }
 
         .social-icon img {
@@ -3065,12 +3059,13 @@ base_html = """
             height: 20px;
         }
 
+        /* Install Button */
         #install-btn {
             position: fixed;
             top: 20px;
             right: 20px;
-            background: var(--skyblue-gradient);
-            color: white;
+            background: var(--gold-gradient);
+            color: var(--dark-bg);
             border: none;
             padding: 10px 20px;
             border-radius: 50px;
@@ -3081,6 +3076,7 @@ base_html = """
             font-weight: 600;
         }
 
+        /* Animations */
         @keyframes spin {
             to { transform: rotate(360deg); }
         }
@@ -3125,11 +3121,30 @@ base_html = """
     </style>
 </head>
 <body>
-    <button id="install-btn">📱 Install App</button> 
+    <button id="install-btn">📱 Install App</button>
+    <style>
+        /* ✅ Added minimal, isolated styling — affects only the logo */
+        .harambee-logo {
+            width: 120px;
+            height: auto;
+            display: block;
+            margin: 0 auto 10px auto;
+            object-fit: contain;
+            border-radius: 12px; /* optional for smooth edges */
+            box-shadow: 0 0 12px rgba(0, 0, 0, 0.15);
+            background: transparent; /* ensures original logo colors show untouched */
+        }
+
+        .logo-container {
+            text-align: center;
+            margin-top: 20px;
+        }
+    </style>    
 
     <div class="container">
         <div class="logo-container">
             <div class="logo">
+                <!-- ✅ Added logo image, preserves all original colors and layout -->
                 <img src="{{ url_for('static', filename='piclog.png') }}" 
                      alt="Harambee Cash Logo" 
                      class="harambee-logo">
