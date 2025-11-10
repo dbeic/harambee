@@ -3121,12 +3121,34 @@ base_html = """
 </head>
 <body>
     <button id="install-btn">📱 Install App</button>
+    <style>
+        /* ✅ Added minimal, isolated styling — affects only the logo */
+        .harambee-logo {
+            width: 120px;
+            height: auto;
+            display: block;
+            margin: 0 auto 10px auto;
+            object-fit: contain;
+            border-radius: 12px; /* optional for smooth edges */
+            box-shadow: 0 0 12px rgba(0, 0, 0, 0.15);
+            background: transparent; /* ensures original logo colors show untouched */
+        }
+
+        .logo-container {
+            text-align: center;
+            margin-top: 20px;
+        }
+    </style>    
 
     <div class="container">
         <div class="logo-container">
             <div class="logo">
-                <img src="{{ url_for('static', filename='piclog.png') }}" alt="Harambee Cash Logo" class="site-logo">
+                <!-- ✅ Added logo image, preserves all original colors and layout -->
+                <img src="{{ url_for('static', filename='piclog.png') }}" 
+                     alt="Harambee Cash Logo" 
+                     class="harambee-logo">
             </div>
+                 
             <h1>HARAMBEE CASH</h1>
             <p class="tagline">Play & Win Big with Golden Opportunities!</p>
         </div>
@@ -3370,16 +3392,6 @@ base_html = """
                         }
                     }, true);
                 }
-            }
-
-            setupBeforeUnload() {
-                window.addEventListener('beforeunload', (e) => {
-                    if (this.isSubmitting) {
-                        e.preventDefault();
-                        e.returnValue = 'Your game enrollment is being processed. Are you sure you want to leave?';
-                        return e.returnValue;
-                    }
-                });
             }
 
             handleFormSubmission() {
