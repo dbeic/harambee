@@ -2569,28 +2569,28 @@ base_html = """
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />  
     <title>HARAMBEE CASH - Play & Win Big!</title>  
     <link rel="manifest" href="{{ url_for('static', filename='manifest.json') }}" />  
-    <meta name="theme-color" content="#D4AF37" />  
+    <meta name="theme-color" content="#4A90E2" />  
     <link rel="icon" type="image/png" href="{{ url_for('static', filename='favicon.ico') }}" />  
     <link rel="apple-touch-icon" href="{{ url_for('static', filename='apple-touch-icon.png') }}" />  
     <meta name="description" content="Harambee Cash - Play exciting games and win big prizes. Join our community gaming platform today!" />
     <meta name="keywords" content="gaming, cash prizes, harambee, win money, online games" />
     <style>  
         :root {
-            --gold-primary: #D4AF37;
-            --gold-secondary: #FFD700;
-            --gold-light: #F7EF8A;
-            --gold-dark: #B8860B;
-            --gold-accent: #FFC125;
-            --gold-gradient: linear-gradient(135deg, #D4AF37 0%, #FFD700 50%, #F7EF8A 100%);
-            --gold-gradient-reverse: linear-gradient(135deg, #F7EF8A 0%, #FFD700 50%, #D4AF37 100%);
-            --gold-gradient-subtle: linear-gradient(135deg, rgba(212, 175, 55, 0.1) 0%, rgba(255, 215, 0, 0.1) 100%);
-            --dark-bg: #1A1A1A;
-            --dark-card: #2D2D2D;
-            --text-light: #FFFFFF;
-            --text-gold: #FFD700;
-            --text-muted: #CCCCCC;
-            --shadow: 0 8px 30px rgba(212, 175, 55, 0.15);
-            --shadow-hover: 0 15px 40px rgba(212, 175, 55, 0.25);
+            --skyblue-primary: #4A90E2;
+            --skyblue-secondary: #87CEEB;
+            --skyblue-light: #B0E2FF;
+            --skyblue-dark: #1E6FB9;
+            --skyblue-accent: #63B3ED;
+            --skyblue-gradient: linear-gradient(135deg, #4A90E2 0%, #87CEEB 50%, #B0E2FF 100%);
+            --skyblue-gradient-reverse: linear-gradient(135deg, #B0E2FF 0%, #87CEEB 50%, #4A90E2 100%);
+            --skyblue-gradient-subtle: linear-gradient(135deg, rgba(74, 144, 226, 0.1) 0%, rgba(135, 206, 235, 0.1) 100%);
+            --light-bg: #F0F8FF;
+            --light-card: #FFFFFF;
+            --text-dark: #2D3748;
+            --text-skyblue: #4A90E2;
+            --text-muted: #718096;
+            --shadow: 0 8px 30px rgba(74, 144, 226, 0.15);
+            --shadow-hover: 0 15px 40px rgba(74, 144, 226, 0.25);
             --radius: 20px;
             --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
             --success: #00C9B1;
@@ -2608,19 +2608,19 @@ base_html = """
             font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
             margin: 0;
             padding: 0;
-            background: var(--dark-bg);
+            background: var(--light-bg);
             background-attachment: fixed;
             display: flex;
             align-items: center;
             justify-content: center;
             min-height: 100vh;
-            color: var(--text-light);
+            color: var(--text-dark);
             text-align: center;
             line-height: 1.6;
         }
 
         .container {
-            background: var(--dark-card);
+            background: var(--light-card);
             backdrop-filter: blur(20px);
             padding: 40px 30px;
             border-radius: var(--radius);
@@ -2629,7 +2629,7 @@ base_html = """
             box-shadow: var(--shadow);
             position: relative;
             margin: 20px;
-            border: 1px solid rgba(212, 175, 55, 0.2);
+            border: 1px solid rgba(74, 144, 226, 0.2);
             transition: var(--transition);
             overflow: hidden;
         }
@@ -2641,7 +2641,7 @@ base_html = """
             left: 0;
             right: 0;
             height: 4px;
-            background: var(--gold-gradient);
+            background: var(--skyblue-gradient);
             z-index: 1;
         }
 
@@ -2653,16 +2653,17 @@ base_html = """
         .logo {
             width: 120px;
             height: 120px;
-            background: var(--gold-gradient);
+            background: var(--light-card);
             border-radius: 50%;
             display: flex;
             align-items: center;
             justify-content: center;
             margin: 0 auto 15px;
             box-shadow: var(--shadow);
-            border: 4px solid var(--gold-dark);
+            border: 4px solid var(--skyblue-light);
             position: relative;
             overflow: hidden;
+            padding: 5px;
         }
 
         .logo::after {
@@ -2672,28 +2673,37 @@ base_html = """
             left: -10px;
             right: -10px;
             bottom: -10px;
-            background: var(--gold-gradient);
+            background: var(--skyblue-gradient);
             border-radius: 50%;
             z-index: -1;
-            opacity: 0.5;
+            opacity: 0.3;
             filter: blur(15px);
+        }
+
+        .harambee-logo {
+            width: 100%;
+            height: auto;
+            display: block;
+            border-radius: 50%;
+            object-fit: contain;
+            background: transparent;
         }
 
         .logo-text {
             font-size: 2rem;
             font-weight: 800;
-            color: var(--dark-bg);
-            text-shadow: 1px 1px 2px rgba(0,0,0,0.2);
+            color: var(--text-dark);
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.1);
         }
 
         h1 {
             font-size: 2.8rem;
             margin-bottom: 20px;
-            background: var(--gold-gradient);
+            background: var(--skyblue-gradient);
             -webkit-background-clip: text;
             background-clip: text;
             color: transparent;
-            text-shadow: 0 0 20px rgba(212, 175, 55, 0.3);
+            text-shadow: 0 0 20px rgba(74, 144, 226, 0.2);
             font-weight: 800;
             letter-spacing: 1px;
         }
@@ -2701,14 +2711,14 @@ base_html = """
         .tagline {
             font-size: 1.3rem;
             margin-bottom: 30px;
-            color: var(--text-gold);
+            color: var(--text-skyblue);
             font-weight: 500;
             letter-spacing: 0.5px;
         }
 
         .balance-display {
-            background: var(--gold-gradient-subtle);
-            border: 1px solid rgba(212, 175, 55, 0.3);
+            background: var(--skyblue-gradient-subtle);
+            border: 1px solid rgba(74, 144, 226, 0.3);
             border-radius: var(--radius);
             padding: 20px;
             margin: 25px auto;
@@ -2732,29 +2742,29 @@ base_html = """
         .balance-amount {
             font-size: 2.2rem;
             font-weight: 700;
-            color: var(--gold-secondary);
-            text-shadow: 0 0 10px rgba(255, 215, 0, 0.3);
+            color: var(--skyblue-primary);
+            text-shadow: 0 0 10px rgba(74, 144, 226, 0.2);
         }
 
         .welcome-section {
             margin: 30px 0;
             padding: 25px;
-            background: var(--gold-gradient-subtle);
+            background: var(--skyblue-gradient-subtle);
             border-radius: var(--radius);
-            border: 1px solid rgba(212, 175, 55, 0.2);
+            border: 1px solid rgba(74, 144, 226, 0.2);
         }
 
         .welcome-section h2 {
             font-size: 1.8rem;
             margin-bottom: 15px;
-            color: var(--text-gold);
+            color: var(--text-skyblue);
             font-weight: 700;
         }
 
         .welcome-section h3 {
             font-size: 1.5rem;
             margin: 20px 0 10px;
-            color: var(--gold-light);
+            color: var(--skyblue-dark);
             font-weight: 600;
         }
 
@@ -2766,8 +2776,8 @@ base_html = """
         }
 
         .cta-button {
-            background: var(--gold-gradient);
-            color: var(--dark-bg);
+            background: var(--skyblue-gradient);
+            color: white;
             border: none;
             padding: 15px 40px;
             font-size: 1.2rem;
@@ -2784,7 +2794,7 @@ base_html = """
         .cta-button:hover {
             transform: translateY(-3px);
             box-shadow: var(--shadow-hover);
-            background: var(--gold-gradient-reverse);
+            background: var(--skyblue-gradient-reverse);
         }
 
         .cta-button:disabled {
@@ -2801,8 +2811,8 @@ base_html = """
         }
 
         .feature-card {
-            background: var(--gold-gradient-subtle);
-            border: 1px solid rgba(212, 175, 55, 0.2);
+            background: var(--skyblue-gradient-subtle);
+            border: 1px solid rgba(74, 144, 226, 0.2);
             border-radius: var(--radius);
             padding: 20px 15px;
             transition: var(--transition);
@@ -2811,20 +2821,20 @@ base_html = """
         .feature-card:hover {
             transform: translateY(-5px);
             box-shadow: var(--shadow);
-            border-color: rgba(212, 175, 55, 0.4);
+            border-color: rgba(74, 144, 226, 0.4);
         }
 
         .feature-icon {
             font-size: 2.5rem;
             margin-bottom: 15px;
-            color: var(--gold-secondary);
+            color: var(--skyblue-primary);
         }
 
         .feature-title {
             font-size: 1.2rem;
             font-weight: 600;
             margin-bottom: 10px;
-            color: var(--text-gold);
+            color: var(--text-skyblue);
         }
 
         .feature-desc {
@@ -2835,13 +2845,13 @@ base_html = """
         .footer {
             margin-top: 30px;
             padding-top: 20px;
-            border-top: 1px solid rgba(212, 175, 55, 0.2);
+            border-top: 1px solid rgba(74, 144, 226, 0.2);
             color: var(--text-muted);
             font-size: 0.9rem;
         }
 
-        .gold-text {
-            background: var(--gold-gradient);
+        .skyblue-text {
+            background: var(--skyblue-gradient);
             -webkit-background-clip: text;
             background-clip: text;
             color: transparent;
@@ -2849,7 +2859,7 @@ base_html = """
         }
 
         .glow-effect {
-            text-shadow: 0 0 10px rgba(255, 215, 0, 0.5);
+            text-shadow: 0 0 10px rgba(74, 144, 226, 0.4);
         }
 
         /* Error and Message Styles */
@@ -2884,17 +2894,17 @@ base_html = """
         .game-window {
             margin: 30px 0;
             padding: 25px;
-            background: var(--gold-gradient-subtle);
+            background: var(--skyblue-gradient-subtle);
             border-radius: var(--radius);
-            border: 1px solid rgba(212, 175, 55, 0.2);
+            border: 1px solid rgba(74, 144, 226, 0.2);
         }
 
         .game-result {
-            background: rgba(0, 0, 0, 0.3);
+            background: rgba(255, 255, 255, 0.7);
             border-radius: var(--radius);
             padding: 15px;
             margin: 15px 0;
-            border-left: 4px solid var(--gold-primary);
+            border-left: 4px solid var(--skyblue-primary);
         }
 
         /* Enrollment Status */
@@ -2913,9 +2923,9 @@ base_html = """
             display: inline-block;
             width: 20px;
             height: 20px;
-            border: 3px solid rgba(255, 255, 255, 0.3);
+            border: 3px solid rgba(74, 144, 226, 0.3);
             border-radius: 50%;
-            border-top-color: var(--gold-primary);
+            border-top-color: var(--skyblue-primary);
             animation: spin 1s ease-in-out infinite;
             margin-right: 10px;
         }
@@ -2931,9 +2941,9 @@ base_html = """
         }
 
         .offline-btn {
-            background: var(--gold-gradient-subtle);
-            border: 1px solid rgba(212, 175, 55, 0.3);
-            color: var(--text-gold);
+            background: var(--skyblue-gradient-subtle);
+            border: 1px solid rgba(74, 144, 226, 0.3);
+            color: var(--text-skyblue);
             padding: 12px 20px;
             border-radius: var(--radius);
             margin: 10px;
@@ -2942,14 +2952,14 @@ base_html = """
         }
 
         .offline-btn:hover {
-            background: var(--gold-gradient);
-            color: var(--dark-bg);
+            background: var(--skyblue-gradient);
+            color: white;
         }
 
         /* Trivia Styles */
         .trivia-option {
-            background: var(--gold-gradient-subtle);
-            border: 1px solid rgba(212, 175, 55, 0.3);
+            background: var(--skyblue-gradient-subtle);
+            border: 1px solid rgba(74, 144, 226, 0.3);
             padding: 15px;
             margin: 10px 0;
             border-radius: var(--radius);
@@ -2958,7 +2968,7 @@ base_html = """
         }
 
         .trivia-option:hover {
-            background: rgba(212, 175, 55, 0.2);
+            background: rgba(74, 144, 226, 0.15);
         }
 
         .trivia-correct {
@@ -2976,8 +2986,8 @@ base_html = """
             position: fixed;
             top: 20px;
             right: 20px;
-            background: var(--gold-gradient);
-            color: var(--dark-bg);
+            background: var(--skyblue-gradient);
+            color: white;
             padding: 20px;
             border-radius: var(--radius);
             box-shadow: var(--shadow-hover);
@@ -2992,7 +3002,7 @@ base_html = """
             left: 0;
             width: 100%;
             height: 100%;
-            background: rgba(0, 0, 0, 0.8);
+            background: rgba(255, 255, 255, 0.95);
             display: none;
             justify-content: center;
             align-items: center;
@@ -3002,31 +3012,34 @@ base_html = """
 
         .animation-content {
             text-align: center;
-            color: white;
+            color: var(--text-dark);
         }
 
         .animated-image {
             font-size: 8rem;
             margin-bottom: 20px;
             animation: bounce 1s infinite;
+            color: var(--skyblue-primary);
         }
 
         .animation-text {
             font-size: 2rem;
             font-weight: bold;
-            text-shadow: 0 0 10px rgba(255, 215, 0, 0.8);
+            text-shadow: 0 0 10px rgba(74, 144, 226, 0.4);
         }
 
         .rocket, .confetti {
             position: absolute;
             font-size: 2rem;
             animation: floatUp 2s ease-out forwards;
+            color: var(--skyblue-primary);
         }
 
         .confetti {
             width: 10px;
             height: 10px;
             border-radius: 2px;
+            background: var(--skyblue-gradient);
         }
 
         /* Social Icons */
@@ -3043,14 +3056,14 @@ base_html = """
             display: flex;
             align-items: center;
             justify-content: center;
-            background: var(--gold-gradient-subtle);
+            background: var(--skyblue-gradient-subtle);
             border-radius: 50%;
             transition: var(--transition);
         }
 
         .social-icon:hover {
             transform: translateY(-3px);
-            background: var(--gold-gradient);
+            background: var(--skyblue-gradient);
         }
 
         .social-icon img {
@@ -3063,8 +3076,8 @@ base_html = """
             position: fixed;
             top: 20px;
             right: 20px;
-            background: var(--gold-gradient);
-            color: var(--dark-bg);
+            background: var(--skyblue-gradient);
+            color: white;
             border: none;
             padding: 10px 20px;
             border-radius: 50px;
@@ -3121,36 +3134,18 @@ base_html = """
 </head>
 <body>
     <button id="install-btn">📱 Install App</button>
-    <style>
-        /* ✅ Added minimal, isolated styling — affects only the logo */
-        .harambee-logo {
-            width: 120px;
-            height: auto;
-            display: block;
-            margin: 0 auto 10px auto;
-            object-fit: contain;
-            border-radius: 12px; /* optional for smooth edges */
-            box-shadow: 0 0 12px rgba(0, 0, 0, 0.15);
-            background: transparent; /* ensures original logo colors show untouched */
-        }
-
-        .logo-container {
-            text-align: center;
-            margin-top: 20px;
-        }
-    </style>    
 
     <div class="container">
         <div class="logo-container">
             <div class="logo">
-                <!-- ✅ Added logo image, preserves all original colors and layout -->
+                <!-- ✅ Fixed logo section - preserves original colors -->
                 <img src="{{ url_for('static', filename='piclog.png') }}" 
                      alt="Harambee Cash Logo" 
                      class="harambee-logo">
             </div>
                  
             <h1>HARAMBEE CASH</h1>
-            <p class="tagline">Play & Win Big with Golden Opportunities!</p>
+            <p class="tagline">Play & Win Big with Sky High Opportunities!</p>
         </div>
 
         <p id="timestamp-display">Loading time...</p>
@@ -3161,7 +3156,7 @@ base_html = """
 
         {% if not session.get('user_id') %}
             <div class="welcome-section">
-                <h2>Welcome to <span class="gold-text">Harambee Cash</span></h2>
+                <h2>Welcome to <span class="skyblue-text">Harambee Cash</span></h2>
                 <p>Join our exciting gaming platform where you can play and win real prizes!</p>
                 
                 <div style="text-align: center; margin: 25px 0;">
@@ -3170,7 +3165,7 @@ base_html = """
                         <button class="cta-button">Create Account</button>
                     </a>
                     <a href="/login" style="display: inline-block; margin: 10px;">
-                        <button class="cta-button" style="background: var(--gold-gradient-reverse);">Login</button>
+                        <button class="cta-button" style="background: var(--skyblue-gradient-reverse);">Login</button>
                     </a>
                 </div>
 
@@ -3206,7 +3201,7 @@ base_html = """
                 </ul>
             </div>
         {% else %}
-            <p style="font-size: 1.3rem; color: var(--text-gold); font-weight: 700;">Welcome back, {{ session.get('username') }}! 👋</p>  
+            <p style="font-size: 1.3rem; color: var(--text-skyblue); font-weight: 700;">Welcome back, {{ session.get('username') }}! 👋</p>  
             <div class="balance-display">
                 <div class="balance-label">Your Wallet Balance</div>
                 <div class="balance-amount">Ksh. {{ wallet_balance | default(0.0) | float | round(2) }}</div>
