@@ -172,7 +172,37 @@ def init_db():
                 FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE,
                 FOREIGN KEY(processed_by) REFERENCES admins(id) ON DELETE SET NULL
             )
-        """)        
+        """)
+        # Deposit requests table
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS deposit_requests (
+                id SERIAL PRIMARY KEY,
+                user_id INTEGER NOT NULL,
+                username TEXT NOT NULL,
+                amount NUMERIC NOT NULL,
+                voucher_code TEXT UNIQUE NOT NULL,
+                status TEXT DEFAULT 'pending' CHECK(status IN ('pending', 'completed', 'rejected')),
+                request_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                processed_time TIMESTAMP NULL,
+                processed_by INTEGER NULL,
+                admin_notes TEXT,
+                FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE,
+                FOREIGN KEY(processed_by) REFERENCES admins(id) ON DELETE SET NULL
+            )
+        """)
+        
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS user_suspensions (
+                id SERIAL PRIMARY KEY,
+                user_id INTEGER NOT NULL,
+                reason TEXT NOT NULL,
+                suspension_end TIMESTAMP NOT NULL,
+                suspended_by INTEGER,
+                suspended_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE,
+                FOREIGN KEY(suspended_by) REFERENCES admins(id) ON DELETE SET NULL
+            )
+        """)           
         # Withdrawal limits (tracks user withdrawal frequency)
         cursor.execute("""
             CREATE TABLE IF NOT EXISTS withdrawal_limits (
@@ -227,6 +257,17 @@ def init_db():
             print('Admin created successfully')
 
 init_db()
+
+def get_wallet_balance(user_id):
+    try:
+        with get_db_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("SELECT wallet FROM users WHERE id = %s", (user_id,))
+            result = cursor.fetchone()
+            return float(result[0]) if result else 0.0
+    except Exception as e:
+        logging.error(f"Error getting wallet balance: {e}")
+        return 0.0
 
 # --- Wallet & transactions ---
 def get_wallet_balance(user_id):
@@ -316,6 +357,17 @@ def log_visitor():
 def static_files(filename):
     return send_from_directory("static", filename)
 
+
+@app.route("/")
+def index():
+    if 'user_id' in session:
+        wallet_balance = get_wallet_balance(session['user_id'])
+    else:
+        wallet_balance = 0.0
+        
+    return render_template_string(base_html, 
+                                wallet_balance=wallet_balance,
+                                session=session)
 
 # --- Routes ---
 @app.route("/", methods=["GET"])
@@ -450,7 +502,20 @@ def manifest():
 
 @app.route('/service-worker.js')
 def sw():
-    return send_from_directory('static', 'service-worker.js')    
+    return send_from_directory('static', 'service-worker.js')
+    
+@app.route("/privacy")
+def privacy():
+    return render_template_string(PRIVACY_CONTENT)
+
+@app.route("/terms")
+def terms():
+    return render_template_string(TERMS_CONTENT)
+
+@app.route("/docs")
+def docs():
+    return render_template_string(DOCS_CONTENT)
+    
 
 @app.route("/logout")
 def logout():
@@ -502,17 +567,6 @@ def stream():
 
     return Response(stream_with_context(event_stream()), content_type="text/event-stream")
 
-@app.route("/privacy")
-def privacy():
-    return render_template_string(PRIVACY_CONTENT)
-
-@app.route("/terms")
-def terms():
-    return render_template_string(TERMS_CONTENT)
-
-@app.route("/docs")
-def docs():
-    return render_template_string(DOCS_CONTENT)
 
 @app.route("/game_data")
 def game_data():
@@ -520,28 +574,41 @@ def game_data():
         with get_db_connection() as conn:
             cursor = conn.cursor()
 
+            # Get upcoming game
             cursor.execute("SELECT game_code, timestamp FROM results WHERE status = 'upcoming' ORDER BY timestamp DESC LIMIT 1")
             upcoming_game = cursor.fetchone()
             upcoming_game_data = {
                 "game_code": upcoming_game[0] if upcoming_game else "N/A",
                 "timestamp": upcoming_game[1] if upcoming_game else "N/A",
-                "outcome_message": "Upcoming"
+                "outcome_message": "Starting soon..."
             } if upcoming_game else None
 
-            cursor.execute("SELECT game_code, num_users FROM results WHERE status = 'in progress' ORDER BY timestamp DESC LIMIT 1")
+            # Get in-progress game
+            cursor.execute("""
+                SELECT game_code, timestamp, num_users, total_amount, winner, winner_amount 
+                FROM results 
+                WHERE status = 'in progress' 
+                ORDER BY timestamp DESC LIMIT 1
+            """)
             in_progress_game = cursor.fetchone()
             in_progress_game_data = {
                 "game_code": in_progress_game[0] if in_progress_game else "N/A",
-                "num_users": in_progress_game[1] if in_progress_game else 0,
-                "outcome_message": "In Progress"
+                "timestamp": in_progress_game[1] if in_progress_game else "N/A",
+                "num_users": in_progress_game[2] if in_progress_game else 0,
+                "total_amount": float(in_progress_game[3]) if in_progress_game and in_progress_game[3] else 0.0,
+                "winner": in_progress_game[4] if in_progress_game else "N/A",
+                "winner_amount": float(in_progress_game[5]) if in_progress_game and in_progress_game[5] else 0.0,
+                "status": "in progress",
+                "outcome_message": "Game in progress"
             } if in_progress_game else None
 
+            # Get completed games
             cursor.execute("""
-            SELECT game_code, timestamp, num_users, total_amount, deduction, winner, winner_amount
-            FROM results
-            WHERE status = 'completed'
-            ORDER BY timestamp DESC
-            LIMIT 50
+                SELECT game_code, timestamp, num_users, total_amount, deduction, winner, winner_amount
+                FROM results
+                WHERE status = 'completed'
+                ORDER BY timestamp DESC
+                LIMIT 50
             """)
             completed_games = cursor.fetchall()
 
@@ -554,21 +621,38 @@ def game_data():
                     "deduction": f"Ksh. {float(game[4]):.2f}" if game[4] else "Ksh. 0.00",
                     "winner": game[5] if game[5] else "N/A",
                     "winner_amount": f"Ksh. {float(game[6]):.2f}" if game[6] else "Ksh. 0.00",
-                    "outcome_message": "Completed"
+                    "outcome_message": f"Winner: {game[5]}" if game[5] else "No winner"
                 }
                 for game in completed_games
-            ] if completed_games else []
+            ]
+
+            # Check if current user is queued using your game_queue table
+            current_user_queued = False
+            if session.get('user_id'):
+                cursor.execute("SELECT COUNT(*) FROM game_queue WHERE user_id = %s", (session['user_id'],))
+                current_user_queued = cursor.fetchone()[0] > 0
 
         response_data = {
-            "upcoming_game": upcoming_game_data or {"game_code": "N/A", "timestamp": "N/A", "outcome_message": "No upcoming games"},
-            "in_progress_game": in_progress_game_data or {"game_code": "N/A", "num_users": 0, "outcome_message": "No games in progress"},
-            "completed_games": completed_games_data if completed_games_data else [{"game_code": "N/A", "outcome_message": "No completed games"}]
+            "upcoming_game": upcoming_game_data or {
+                "game_code": "N/A", 
+                "timestamp": "N/A", 
+                "outcome_message": "No upcoming games"
+            },
+            "in_progress_game": in_progress_game_data,
+            "completed_games": completed_games_data,
+            "current_user_queued": current_user_queued
         }
 
         return jsonify(response_data)
 
     except Exception as e:
-        return jsonify({"error": str(e)}), 500
+        print(f"Error in game_data: {str(e)}")
+        return jsonify({
+            "error": "Unable to fetch game data",
+            "upcoming_game": {"game_code": "N/A", "timestamp": "N/A", "outcome_message": "Error loading"},
+            "completed_games": [],
+            "current_user_queued": False
+        }), 500
 
 @app.route("/play", methods=["POST"])
 @limiter.limit("3 per minute")
@@ -587,33 +671,44 @@ def play():
         with get_db_connection() as conn:
             cursor = conn.cursor()
 
+            # Check if user is already in queue
             cursor.execute("SELECT user_id FROM game_queue WHERE user_id = %s", (user_id,))
             if cursor.fetchone():
-                return redirect(url_for("index", error="You are already in the queue."))
+                return redirect(url_for("index", message="Already enrolled in current game"))
 
-            # DEDUCTION: Immediately deduct Ksh. 1.00 upon enrollment
+            # DEDUCTION: Use your existing column name (you're using 'wallet')
             cursor.execute("UPDATE users SET wallet = wallet - 1.0 WHERE id = %s", (user_id,))
+            
+            # Verify deduction was successful
+            if cursor.rowcount == 0:
+                return redirect(url_for("index", error="Deduction failed. Please try again."))
+            
+            # Record transaction (your existing code)
             cursor.execute("INSERT INTO transactions (user_id, type, amount, timestamp) VALUES (%s, 'game_entry', %s, %s)",
                           (user_id, -1.0, get_timestamp()))
             
+            # Add to game queue (your existing code)
             cursor.execute("INSERT INTO game_queue (user_id, timestamp) VALUES (%s, %s)",
                           (user_id, get_timestamp()))
             conn.commit()
 
-            cursor.execute("SELECT status FROM results ORDER BY timestamp DESC LIMIT 1")
-            latest_game = cursor.fetchone()
-            if latest_game and latest_game[0] == "completed":
-                message = "The game is over! Check for results below and play again to try your luck!"
-            else:
-                message = "Enrolled in the next round! Ksh. 1.00 deducted."
+            # Return the EXACT success message frontend expects
+            return redirect(url_for("index", message="Successfully enrolled in the next game!"))
 
-        return redirect(url_for("index", message=message))
-
+    except psycopg2.IntegrityError:
+        if conn:
+            conn.rollback()
+        return redirect(url_for("index", message="Already enrolled in current game"))
     except psycopg2.Error as e:
         if conn:
             conn.rollback()
         logging.error(f"Database error during enrollment: {str(e)}") 
         return redirect(url_for("index", error="An error occurred while enrolling. Please try again."))
+    except Exception as e:
+        if conn:
+            conn.rollback()
+        logging.error(f"Unexpected error during enrollment: {str(e)}")
+        return redirect(url_for("index", error="An unexpected error occurred. Please try again."))
 
 @app.route("/admin/add_allowed_user", methods=["POST"])
 def admin_add_allowed_user():
@@ -1129,6 +1224,9 @@ def process_withdrawal():
         logging.error(f"Process withdrawal error: {e}")
         return jsonify({"error": "System error"}), 500
         
+#NON MONETARY ADMIN FUNCTIONS
+###################
+
 admin_withdrawals_html = """
 <!DOCTYPE html>
 <html lang="en">
@@ -1282,188 +1380,7 @@ admin_withdrawals_html = """
 </body>
 </html>
 """             
-    
-withdrawal_receipt_html = """
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Withdrawal Receipt - HARAMBEE CASH!</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            margin: 0;
-            padding: 20px;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            min-height: 100vh;
-        }
-        .receipt-container {
-            background: white;
-            color: #333;
-            padding: 30px;
-            border-radius: 15px;
-            box-shadow: 0 8px 25px rgba(0,0,0,0.3);
-            max-width: 400px;
-            width: 90%;
-            border: 3px solid #ffcc00;
-        }
-        .receipt-header {
-            text-align: center;
-            border-bottom: 2px dashed #333;
-            padding-bottom: 15px;
-            margin-bottom: 20px;
-        }
-        .receipt-header h1 {
-            color: #ff6B35;
-            margin: 0;
-            font-size: 1.5rem;
-        }
-        .receipt-code {
-            background: #333;
-            color: #ffcc00;
-            padding: 5px 10px;
-            border-radius: 5px;
-            font-family: monospace;
-            font-weight: bold;
-        }
-        .receipt-details {
-            margin-bottom: 20px;
-        }
-        .detail-row {
-            display: flex;
-            justify-content: space-between;
-            margin-bottom: 10px;
-            padding: 8px 0;
-            border-bottom: 1px solid #eee;
-        }
-        .detail-label {
-            font-weight: bold;
-            color: #666;
-        }
-        .detail-value {
-            font-weight: bold;
-        }
-        .amount-highlight {
-            background: #4CAF50;
-            color: white;
-            padding: 10px;
-            border-radius: 8px;
-            text-align: center;
-            margin: 15px 0;
-            font-size: 1.2rem;
-        }
-        .fee-deduction {
-            color: #f44336;
-            font-weight: bold;
-        }
-        .important-notice {
-            background: #fff3cd;
-            color: #856404;
-            padding: 15px;
-            border-radius: 8px;
-            border-left: 4px solid #ffc107;
-            margin: 20px 0;
-            font-size: 0.9rem;
-        }
-        .action-buttons {
-            text-align: center;
-            margin-top: 25px;
-        }
-        .btn {
-            padding: 12px 25px;
-            margin: 0 5px;
-            border: none;
-            border-radius: 8px;
-            cursor: pointer;
-            font-weight: bold;
-            text-decoration: none;
-            display: inline-block;
-        }
-        .btn-print {
-            background: #2196F3;
-            color: white;
-        }
-        .btn-home {
-            background: #4CAF50;
-            color: white;
-        }
-        @media print {
-            body {
-                background: white;
-                padding: 0;
-            }
-            .receipt-container {
-                box-shadow: none;
-                border: 2px solid #333;
-                max-width: 100%;
-            }
-            .action-buttons {
-                display: none;
-            }
-        }
-    </style>
-</head>
-<body>
-    <div class="receipt-container">
-        <div class="receipt-header">
-            <h1>HARAMBEE CASH</h1>
-            <p>Withdrawal Receipt</p>
-            <div class="receipt-code">{{ withdrawal[11] }}</div>
-        </div>
-        
-        <div class="receipt-details">
-            <div class="detail-row">
-                <span class="detail-label">Username:</span>
-                <span class="detail-value">{{ withdrawal[2] }}</span>
-            </div>
-            <div class="detail-row">
-                <span class="detail-label">Date & Time:</span>
-                <span class="detail-value">{{ withdrawal[5].strftime('%Y-%m-%d %H:%M') }}</span>
-            </div>
-            <div class="detail-row">
-                <span class="detail-label">Status:</span>
-                <span class="detail-value" style="color: #ff9800;">{{ withdrawal[6].upper() }}</span>
-            </div>
-        </div>
-        
-        <div class="amount-highlight">
-            <div style="font-size: 0.9rem; opacity: 0.9;">Requested Amount</div>
-            <div style="font-size: 1.5rem; font-weight: bold;">KES {{ "%.2f"|format(withdrawal[3]) }}</div>
-        </div>
-        
-        <div class="receipt-details">
-            <div class="detail-row">
-                <span class="detail-label">Withdrawal Fee:</span>
-                <span class="detail-value fee-deduction">- KES {{ "%.2f"|format(withdrawal[4]) }}</span>
-            </div>
-            <div class="detail-row" style="border-bottom: 2px solid #333; font-size: 1.1rem;">
-                <span class="detail-label">Net Amount:</span>
-                <span class="detail-value" style="color: #4CAF50;">KES {{ "%.2f"|format(withdrawal[5]) }}</span>
-            </div>
-        </div>
-        
-        <div class="important-notice">
-            <strong>ðŸ’¡ Important Information:</strong><br>
-            â€¢ Present this receipt to admin for processing<br>
-            â€¢ Approved withdrawals are processed manually<br>
-            â€¢ Keep this receipt for your records<br>
-            â€¢ Processing time: Within 24 hours
-        </div>
-        
-        <div class="action-buttons">
-            <button class="btn btn-print" onclick="window.print()">ðŸ–¨ï¸ Print Receipt</button>
-            <a href="/" class="btn btn-home">ðŸ  Back Home</a>
-        </div>
-    </div>
-</body>
-</html>
-"""        
-        
+       
 withdraw_html = """
 <!DOCTYPE html>
 <html lang="en">
@@ -1660,7 +1577,693 @@ withdraw_html = """
     </div>
 </body>
 </html>
-"""                    
+"""
+###############
+
+admin_deposit_html = """
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Deposit Management - HARAMBEE CASH!</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 15px;
+            background: linear-gradient(to right, #43cea2, #185a9d);
+            color: white;
+        }
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            background: rgba(0, 0, 0, 0.8);
+            padding: 15px;
+            border-radius: 10px;
+        }
+        h1 {
+            color: #ffcc00;
+            text-align: center;
+            font-size: 1.5rem;
+        }
+        .pending-badge {
+            background: #ff5722;
+            color: white;
+            padding: 3px 8px;
+            border-radius: 15px;
+            font-size: 0.8rem;
+            margin-left: 8px;
+        }
+        .deposit-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+            background: rgba(255,255,255,0.1);
+            font-size: 0.8rem;
+        }
+        .deposit-table th, .deposit-table td {
+            padding: 8px;
+            border: 1px solid #444;
+            text-align: left;
+        }
+        .deposit-table th {
+            background: rgba(76, 175, 80, 0.3);
+            color: #ffcc00;
+        }
+        .status-pending { color: #ff9800; font-weight: bold; }
+        .status-completed { color: #4CAF50; font-weight: bold; }
+        .status-rejected { color: #f44336; font-weight: bold; }
+        .action-buttons {
+            display: flex;
+            gap: 3px;
+        }
+        .btn {
+            padding: 4px 8px;
+            border: none;
+            border-radius: 3px;
+            cursor: pointer;
+            font-size: 0.7rem;
+        }
+        .btn-approve { background: #4CAF50; color: white; }
+        .btn-reject { background: #f44336; color: white; }
+        .btn:disabled {
+            background: #666;
+            cursor: not-allowed;
+        }
+        .back-link {
+            text-align: center;
+            margin-top: 15px;
+        }
+        .back-link a {
+            color: #ffcc00;
+            text-decoration: none;
+            font-weight: bold;
+            font-size: 0.9rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Deposit Management <span class="pending-badge">{{ pending_count }} Pending</span></h1>
+        
+        <table class="deposit-table">
+            <thead>
+                <tr>
+                    <th>Voucher Code</th>
+                    <th>User</th>
+                    <th>Amount</th>
+                    <th>Status</th>
+                    <th>Request Time</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for d in deposits %}
+                <tr>
+                    <td><strong>{{ d[4] }}</strong></td>
+                    <td>{{ d[2] }}<br><small>{{ d[8] }}</small></td>
+                    <td>KES {{ "%.2f"|format(d[3]) }}</td>
+                    <td class="status-{{ d[5] }}">{{ d[5].upper() }}</td>
+                    <td>{{ d[6].strftime('%Y-%m-%d %H:%M') }}</td>
+                    <td class="action-buttons">
+                        {% if d[5] == 'pending' %}
+                        <button class="btn btn-approve" onclick="processDeposit({{ d[0] }}, 'approve')">Approve</button>
+                        <button class="btn btn-reject" onclick="processDeposit({{ d[0] }}, 'reject')">Reject</button>
+                        {% else %}
+                        <button class="btn" disabled>Processed</button>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        
+        <div class="back-link">
+            <a href="/admin/dashboard">← Back to Admin Dashboard</a>
+        </div>
+    </div>
+
+    <script>
+    function processDeposit(depositId, action) {
+        const adminNotes = prompt('Enter admin notes:') || '';
+        
+        fetch('/admin/process_deposit', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+            },
+            body: `deposit_id=${depositId}&action=${action}&admin_notes=${encodeURIComponent(adminNotes)}`
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert('Deposit ' + action + 'd successfully');
+                location.reload();
+            } else {
+                alert('Error: ' + data.error);
+            }
+        })
+        .catch(error => {
+            alert('System error: ' + error);
+        });
+    }
+    </script>
+</body>
+</html>
+"""
+
+withdrawal_receipt_html = """
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Withdrawal Receipt - HARAMBEE CASH!</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 10px;
+            padding: 0;
+            background: white;
+            color: black;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+        .receipt-container {
+            background: white;
+            border: 2px solid #333;
+            padding: 15px;
+            border-radius: 8px;
+            max-width: 300px;
+            width: 100%;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        .receipt-header {
+            text-align: center;
+            border-bottom: 2px dashed #333;
+            padding-bottom: 10px;
+            margin-bottom: 12px;
+        }
+        .receipt-header h1 {
+            color: #ff6B35;
+            margin: 0;
+            font-size: 1.2rem;
+        }
+        .receipt-code {
+            background: #333;
+            color: #ffcc00;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-family: monospace;
+            font-weight: bold;
+            font-size: 0.9rem;
+        }
+        .receipt-details {
+            margin-bottom: 15px;
+        }
+        .detail-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 6px;
+            padding: 4px 0;
+            border-bottom: 1px solid #eee;
+            font-size: 0.8rem;
+        }
+        .detail-label {
+            font-weight: bold;
+            color: #666;
+        }
+        .detail-value {
+            font-weight: bold;
+        }
+        .amount-highlight {
+            background: #4CAF50;
+            color: white;
+            padding: 8px;
+            border-radius: 5px;
+            text-align: center;
+            margin: 10px 0;
+        }
+        .fee-deduction {
+            color: #f44336;
+            font-weight: bold;
+        }
+        .instructions {
+            background: #fff3cd;
+            color: #856404;
+            padding: 10px;
+            border-radius: 5px;
+            border-left: 3px solid #ffc107;
+            margin: 12px 0;
+            font-size: 0.75rem;
+        }
+        .action-buttons {
+            text-align: center;
+            margin-top: 15px;
+        }
+        .btn {
+            padding: 8px 15px;
+            margin: 0 3px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+            text-decoration: none;
+            display: inline-block;
+            font-size: 0.8rem;
+        }
+        .btn-print {
+            background: #2196F3;
+            color: white;
+        }
+        .btn-home {
+            background: #4CAF50;
+            color: white;
+        }
+        @media print {
+            body {
+                padding: 0;
+                margin: 0;
+            }
+            .receipt-container {
+                box-shadow: none;
+                border: 1px solid #333;
+                max-width: 100%;
+            }
+            .action-buttons {
+                display: none;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="receipt-container">
+        <div class="receipt-header">
+            <h1>HARAMBEE CASH</h1>
+            <p style="margin: 5px 0; font-size: 0.9rem;">Withdrawal Receipt</p>
+            <div class="receipt-code">{{ withdrawal[11] }}</div>
+        </div>
+        
+        <div class="receipt-details">
+            <div class="detail-row">
+                <span class="detail-label">Username:</span>
+                <span class="detail-value">{{ withdrawal[2] }}</span>
+            </div>
+            <div class="detail-row">
+                <span class="detail-label">Email:</span>
+                <span class="detail-value" style="font-size: 0.7rem;">{{ withdrawal[12] }}</span>
+            </div>
+            <div class="detail-row">
+                <span class="detail-label">Date:</span>
+                <span class="detail-value">{{ withdrawal[7].strftime('%Y-%m-%d') }}</span>
+            </div>
+            <div class="detail-row">
+                <span class="detail-label">Time:</span>
+                <span class="detail-value">{{ withdrawal[7].strftime('%H:%M') }}</span>
+            </div>
+            <div class="detail-row">
+                <span class="detail-label">Status:</span>
+                <span class="detail-value" style="color: #ff9800;">{{ withdrawal[6].upper() }}</span>
+            </div>
+        </div>
+        
+        <div class="amount-highlight">
+            <div style="font-size: 0.8rem; opacity: 0.9;">Requested Amount</div>
+            <div style="font-size: 1.3rem; font-weight: bold;">KES {{ "%.2f"|format(withdrawal[3]) }}</div>
+        </div>
+        
+        <div class="receipt-details">
+            <div class="detail-row">
+                <span class="detail-label">Withdrawal Fee:</span>
+                <span class="detail-value fee-deduction">- KES {{ "%.2f"|format(withdrawal[4]) }}</span>
+            </div>
+            <div class="detail-row" style="border-bottom: 2px solid #333; font-size: 0.9rem;">
+                <span class="detail-label">Net Amount:</span>
+                <span class="detail-value" style="color: #4CAF50;">KES {{ "%.2f"|format(withdrawal[5]) }}</span>
+            </div>
+        </div>
+        
+        <div class="instructions">
+            <strong>📋 FOR ADMIN PROCESSING:</strong><br>
+            "Kindly send KES {{ "%.2f"|format(withdrawal[5]) }} to the user via platform M-Pesa number as per system approval."
+            <br><br>
+            <strong>ℹ️ VERIFICATION:</strong> Use independent M-Pesa records for transaction confirmation.
+        </div>
+        
+        <div class="action-buttons">
+            <button class="btn btn-print" onclick="window.print()">🖨️ Print</button>
+            <a href="/" class="btn btn-home">🏠 Home</a>
+        </div>
+    </div>
+</body>
+</html>
+"""
+
+deposit_voucher_html = """
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Deposit Voucher - HARAMBEE CASH!</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 10px;
+            padding: 0;
+            background: white;
+            color: black;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+        .voucher-container {
+            background: white;
+            border: 2px solid #333;
+            padding: 15px;
+            border-radius: 8px;
+            max-width: 300px;
+            width: 100%;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        .voucher-header {
+            text-align: center;
+            border-bottom: 2px dashed #333;
+            padding-bottom: 10px;
+            margin-bottom: 12px;
+        }
+        .voucher-header h1 {
+            color: #ff6B35;
+            margin: 0;
+            font-size: 1.2rem;
+        }
+        .voucher-code {
+            background: #333;
+            color: #ffcc00;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-family: monospace;
+            font-weight: bold;
+            font-size: 0.9rem;
+        }
+        .voucher-details {
+            margin-bottom: 15px;
+        }
+        .detail-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 6px;
+            padding: 4px 0;
+            border-bottom: 1px solid #eee;
+            font-size: 0.8rem;
+        }
+        .detail-label {
+            font-weight: bold;
+            color: #666;
+        }
+        .detail-value {
+            font-weight: bold;
+        }
+        .amount-section {
+            background: #4CAF50;
+            color: white;
+            padding: 8px;
+            border-radius: 5px;
+            text-align: center;
+            margin: 10px 0;
+        }
+        .instructions {
+            background: #fff3cd;
+            color: #856404;
+            padding: 10px;
+            border-radius: 5px;
+            border-left: 3px solid #ffc107;
+            margin: 12px 0;
+            font-size: 0.75rem;
+        }
+        .action-buttons {
+            text-align: center;
+            margin-top: 15px;
+        }
+        .btn {
+            padding: 8px 15px;
+            margin: 0 3px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+            text-decoration: none;
+            display: inline-block;
+            font-size: 0.8rem;
+        }
+        .btn-print {
+            background: #2196F3;
+            color: white;
+        }
+        .btn-home {
+            background: #4CAF50;
+            color: white;
+        }
+        @media print {
+            body {
+                padding: 0;
+                margin: 0;
+            }
+            .voucher-container {
+                box-shadow: none;
+                border: 1px solid #333;
+                max-width: 100%;
+            }
+            .action-buttons {
+                display: none;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="voucher-container">
+        <div class="voucher-header">
+            <h1>HARAMBEE CASH</h1>
+            <p style="margin: 5px 0; font-size: 0.9rem;">Deposit Voucher</p>
+            <div class="voucher-code">{{ deposit[4] }}</div>
+        </div>
+        
+        <div class="voucher-details">
+            <div class="detail-row">
+                <span class="detail-label">Username:</span>
+                <span class="detail-value">{{ deposit[2] }}</span>
+            </div>
+            <div class="detail-row">
+                <span class="detail-label">Date:</span>
+                <span class="detail-value">{{ deposit[6].strftime('%Y-%m-%d') }}</span>
+            </div>
+            <div class="detail-row">
+                <span class="detail-label">Time:</span>
+                <span class="detail-value">{{ deposit[6].strftime('%H:%M') }}</span>
+            </div>
+            <div class="detail-row">
+                <span class="detail-label">Status:</span>
+                <span class="detail-value" style="color: #ff9800;">{{ deposit[5].upper() }}</span>
+            </div>
+        </div>
+        
+        <div class="amount-section">
+            <div style="font-size: 0.8rem; opacity: 0.9;">Deposit Amount</div>
+            <div style="font-size: 1.3rem; font-weight: bold;">KES {{ "%.2f"|format(deposit[3]) }}</div>
+        </div>
+        
+        <div class="instructions">
+            <strong>📋 PRESENT TO ADMIN:</strong><br>
+            "Kindly update my platform wallet account with the M-Pesa amount sent to your platform recently!"
+            <br><br>
+            <strong>ℹ️ NOTE:</strong> No M-Pesa confirmation message needed. Platform has official M-Pesa number for verification.
+        </div>
+        
+        <div class="action-buttons">
+            <button class="btn btn-print" onclick="window.print()">🖨️ Print</button>
+            <a href="/" class="btn btn-home">🏠 Home</a>
+        </div>
+    </div>
+</body>
+</html>
+"""
+
+deposit_html = """
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Deposit Funds - HARAMBEE CASH!</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+        .container {
+            background: rgba(0, 0, 0, 0.9);
+            padding: 25px;
+            border-radius: 12px;
+            box-shadow: 0 6px 20px rgba(0,0,0,0.3);
+            max-width: 450px;
+            width: 95%;
+        }
+        h1 {
+            color: #ffcc00;
+            text-align: center;
+            margin-bottom: 15px;
+            font-size: 1.4rem;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            margin-bottom: 6px;
+            color: #ffcc00;
+            font-weight: bold;
+            font-size: 0.9rem;
+        }
+        input {
+            width: 100%;
+            padding: 10px;
+            border: 2px solid #333;
+            border-radius: 6px;
+            background: rgba(255,255,255,0.1);
+            color: white;
+            font-size: 0.9rem;
+            box-sizing: border-box;
+        }
+        input:focus {
+            border-color: #ffcc00;
+            outline: none;
+        }
+        button {
+            width: 100%;
+            padding: 12px;
+            background: linear-gradient(135deg, #4CAF50, #45a049);
+            color: white;
+            border: none;
+            border-radius: 6px;
+            font-size: 1rem;
+            font-weight: bold;
+            cursor: pointer;
+            margin: 10px 0;
+        }
+        button:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 3px 10px rgba(76, 175, 80, 0.4);
+        }
+        .error {
+            background: #d32f2f;
+            color: white;
+            padding: 12px;
+            border-radius: 6px;
+            margin-bottom: 15px;
+            text-align: center;
+            font-size: 0.9rem;
+        }
+        .info-box {
+            background: rgba(255, 204, 0, 0.1);
+            border: 1px solid #ffcc00;
+            padding: 12px;
+            border-radius: 6px;
+            margin: 15px 0;
+            font-size: 0.85rem;
+        }
+        .rules {
+            margin-top: 20px;
+            padding: 12px;
+            background: rgba(255,255,255,0.05);
+            border-radius: 6px;
+            font-size: 0.8rem;
+        }
+        .rules h3 {
+            color: #ffcc00;
+            margin-bottom: 8px;
+            font-size: 0.9rem;
+        }
+        .rules ul {
+            padding-left: 15px;
+            margin: 0;
+        }
+        .rules li {
+            margin-bottom: 5px;
+        }
+        .back-link {
+            text-align: center;
+            margin-top: 15px;
+        }
+        .back-link a {
+            color: #ffcc00;
+            text-decoration: none;
+            font-size: 0.9rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>💰 Deposit Funds</h1>
+        
+        {% if error %}
+        <div class="error">{{ error }}</div>
+        {% endif %}
+        
+        <div class="info-box">
+            <strong>📱 Payment Instructions:</strong><br>
+            1. Send money via M-Pesa to our official number<br>
+            2. Generate deposit voucher below<br>
+            3. Present voucher to admin for verification<br>
+            4. Funds added to wallet after confirmation
+        </div>
+        
+        {% if can_deposit %}
+        <form method="POST" action="/deposit">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            
+            <div class="form-group">
+                <label for="amount">Deposit Amount (KES)</label>
+                <input type="number" id="amount" name="amount" 
+                       min="50" max="50000" step="0.01" 
+                       placeholder="Enter amount (min: KES 50)" required>
+            </div>
+            
+            <button type="submit">
+                Generate Deposit Voucher
+            </button>
+        </form>
+        {% endif %}
+        
+        <div class="rules">
+            <h3>📋 Deposit Rules</h3>
+            <ul>
+                <li>✅ Minimum deposit: KES 50</li>
+                <li>✅ Maximum deposit: KES 50,000</li>
+                <li>✅ Use official M-Pesa number only</li>
+                <li>✅ Keep transaction details safe</li>
+                <li>✅ Processing time: Within 2 hours</li>
+                <li>❌ No fake deposits tolerated</li>
+            </ul>
+        </div>
+        
+        <div class="back-link">
+            <a href="/">← Back to Home</a>
+        </div>
+    </div>
+</body>
+</html>
+"""                              
 
 cashbook_html = """
 <!DOCTYPE html>
@@ -1821,12 +2424,202 @@ cashbook_html = """
 </body>
 </html>
 """
+
+
+@app.route("/deposit", methods=["GET", "POST"])
+@limiter.limit("5 per hour")
+def deposit_request():
+    if not session.get('user_id'):
+        return redirect(url_for('login'))
+    
+    user_id = session['user_id']
+    username = session.get('username')
+    
+    if request.method == "POST":
+        try:
+            amount = float(request.form.get('amount', 0))
+            
+            # Validation
+            if amount < 50:
+                return render_template_string(deposit_html, 
+                    error="Minimum deposit amount is KES 50",
+                    can_deposit=True)
+            
+            if amount > 50000:
+                return render_template_string(deposit_html, 
+                    error="Maximum deposit amount is KES 50,000",
+                    can_deposit=True)
+
+            # Generate deposit voucher
+            voucher_code = f"DPT{datetime.now().strftime('%Y%m%d%H%M%S')}{user_id}"
+            
+            with get_db_connection() as conn:
+                cursor = conn.cursor()
+                
+                # Create deposit request
+                cursor.execute("""
+                    INSERT INTO deposit_requests 
+                    (user_id, username, amount, voucher_code, status)
+                    VALUES (%s, %s, %s, %s, 'pending')
+                """, (user_id, username, amount, voucher_code))
+                
+                conn.commit()
+            
+            # Redirect to voucher page
+            return redirect(url_for('deposit_voucher', voucher_code=voucher_code))
+            
+        except ValueError:
+            return render_template_string(deposit_html, 
+                error="Invalid amount format",
+                can_deposit=True)
+        except Exception as e:
+            logging.error(f"Deposit request error: {e}")
+            return render_template_string(deposit_html, 
+                error="System error. Please try again.",
+                can_deposit=True)
+    
+    # GET request - show deposit form
+    return render_template_string(deposit_html, can_deposit=True)
+
+@app.route("/deposit_voucher/<voucher_code>")
+def deposit_voucher(voucher_code):
+    if not session.get('user_id'):
+        return redirect(url_for('login'))
+    
+    with get_db_connection() as conn:
+        cursor = conn.cursor()
+        cursor.execute("""
+            SELECT * FROM deposit_requests 
+            WHERE voucher_code = %s AND user_id = %s
+        """, (voucher_code, session['user_id']))
+        deposit = cursor.fetchone()
+        
+        if not deposit:
+            return redirect(url_for('index', error="Voucher not found"))
+    
+    return render_template_string(deposit_voucher_html, deposit=deposit)
+
+@app.route("/withdrawal_receipt/<receipt_code>")
+def withdrawal_receipt(receipt_code):
+    if not session.get('user_id'):
+        return redirect(url_for('login'))
+    
+    with get_db_connection() as conn:
+        cursor = conn.cursor()
+        cursor.execute("""
+            SELECT wr.*, u.email
+            FROM withdrawal_requests wr
+            JOIN users u ON wr.user_id = u.id
+            WHERE wr.receipt_code = %s AND wr.user_id = %s
+        """, (receipt_code, session['user_id']))
+        withdrawal = cursor.fetchone()
+        
+        if not withdrawal:
+            return redirect(url_for('index', error="Receipt not found"))
+    
+    return render_template_string(withdrawal_receipt_html, withdrawal=withdrawal)
+
+@app.route("/admin/deposits")
+def admin_deposits():
+    if not session.get("is_admin"):
+        return redirect(url_for("admin_login", error="Unauthorized access."))
+    
+    with get_db_connection() as conn:
+        cursor = conn.cursor()
+        
+        cursor.execute("""
+            SELECT dr.*, u.email
+            FROM deposit_requests dr
+            JOIN users u ON dr.user_id = u.id
+            ORDER BY dr.request_time DESC
+            LIMIT 100
+        """)
+        deposits = cursor.fetchall()
+        
+        cursor.execute("SELECT COUNT(*) FROM deposit_requests WHERE status = 'pending'")
+        pending_count = cursor.fetchone()[0]
+    
+    return render_template_string(admin_deposits_html, 
+        deposits=deposits, 
+        pending_count=pending_count)
+
+@app.route("/admin/process_deposit", methods=["POST"])
+def process_deposit():
+    if not session.get("is_admin"):
+        return jsonify({"error": "Unauthorized"}), 403
+    
+    deposit_id = request.form.get("deposit_id")
+    action = request.form.get("action")
+    admin_notes = request.form.get("admin_notes", "")
+    
+    if not deposit_id or not action:
+        return jsonify({"error": "Missing parameters"}), 400
+    
+    try:
+        with get_db_connection() as conn:
+            cursor = conn.cursor()
+            
+            cursor.execute("""
+                SELECT user_id, amount, status 
+                FROM deposit_requests 
+                WHERE id = %s
+            """, (deposit_id,))
+            deposit = cursor.fetchone()
+            
+            if not deposit:
+                return jsonify({"error": "Deposit not found"}), 404
+            
+            user_id, amount, current_status = deposit
+            
+            if current_status != 'pending':
+                return jsonify({"error": "Deposit already processed"}), 400
+            
+            admin_id = session.get("admin_id")
+            processed_time = datetime.now()
+            
+            if action == 'approve':
+                # Add funds to user wallet
+                cursor.execute("""
+                    UPDATE users 
+                    SET wallet = wallet + %s 
+                    WHERE id = %s
+                """, (amount, user_id))
+                
+                # Record transaction
+                cursor.execute("""
+                    INSERT INTO transactions (user_id, type, amount, timestamp)
+                    VALUES (%s, 'deposit', %s, %s)
+                """, (user_id, amount, processed_time))
+                
+                # Update deposit request
+                cursor.execute("""
+                    UPDATE deposit_requests 
+                    SET status = 'completed', processed_time = %s, 
+                        processed_by = %s, admin_notes = %s
+                    WHERE id = %s
+                """, (processed_time, admin_id, admin_notes, deposit_id))
+                
+            elif action == 'reject':
+                cursor.execute("""
+                    UPDATE deposit_requests 
+                    SET status = 'rejected', processed_time = %s, 
+                        processed_by = %s, admin_notes = %s
+                    WHERE id = %s
+                """, (processed_time, admin_id, admin_notes, deposit_id))
+            
+            conn.commit()
+            return jsonify({"success": True, "message": f"Deposit {action}ed"})
+            
+    except Exception as e:
+        conn.rollback()
+        logging.error(f"Process deposit error: {e}")
+        return jsonify({"error": "System error"}), 500
+
 base_html = """
 <!DOCTYPE html>
 <html lang="en">  
 <head>
-    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-5190046541953794"
-     crossorigin="anonymous"></script>
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-5190046541953794" crossorigin="anonymous"></script>
     <meta charset="UTF-8" />  
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />  
     <title>HARAMBEE CASH - Play & Win Big!</title>  
@@ -1834,6 +2627,8 @@ base_html = """
     <meta name="theme-color" content="#D4AF37" />  
     <link rel="icon" type="image/png" href="{{ url_for('static', filename='favicon.ico') }}" />  
     <link rel="apple-touch-icon" href="{{ url_for('static', filename='apple-touch-icon.png') }}" />  
+    <meta name="description" content="Harambee Cash - Play exciting games and win big prizes. Join our community gaming platform today!" />
+    <meta name="keywords" content="gaming, cash prizes, harambee, win money, online games" />
     <style>  
         :root {
             --gold-primary: #D4AF37;
@@ -1853,6 +2648,9 @@ base_html = """
             --shadow-hover: 0 15px 40px rgba(212, 175, 55, 0.25);
             --radius: 20px;
             --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            --success: #00C9B1;
+            --error: #FF6B35;
+            --warning: #FFD166;
         }
 
         * {
@@ -2044,6 +2842,12 @@ base_html = """
             background: var(--gold-gradient-reverse);
         }
 
+        .cta-button:disabled {
+            opacity: 0.7;
+            cursor: not-allowed;
+            transform: none;
+        }
+
         .features-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
@@ -2103,6 +2907,257 @@ base_html = """
             text-shadow: 0 0 10px rgba(255, 215, 0, 0.5);
         }
 
+        /* Error and Message Styles */
+        .error {
+            background: rgba(255, 107, 53, 0.1);
+            border: 1px solid var(--error);
+            color: var(--error);
+            padding: 15px;
+            border-radius: var(--radius);
+            margin: 15px 0;
+        }
+
+        .message {
+            background: rgba(0, 201, 177, 0.1);
+            border: 1px solid var(--success);
+            color: var(--success);
+            padding: 15px;
+            border-radius: var(--radius);
+            margin: 15px 0;
+        }
+
+        .warning {
+            background: rgba(255, 209, 102, 0.1);
+            border: 1px solid var(--warning);
+            color: var(--warning);
+            padding: 15px;
+            border-radius: var(--radius);
+            margin: 15px 0;
+        }
+
+        /* Game Results Styles */
+        .game-window {
+            margin: 30px 0;
+            padding: 25px;
+            background: var(--gold-gradient-subtle);
+            border-radius: var(--radius);
+            border: 1px solid rgba(212, 175, 55, 0.2);
+        }
+
+        .game-result {
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: var(--radius);
+            padding: 15px;
+            margin: 15px 0;
+            border-left: 4px solid var(--gold-primary);
+        }
+
+        /* Enrollment Status */
+        .enrollment-status {
+            background: rgba(0, 201, 177, 0.1);
+            border: 1px solid var(--success);
+            color: var(--success);
+            padding: 15px;
+            border-radius: var(--radius);
+            margin: 15px 0;
+            animation: pulse 2s infinite;
+        }
+
+        /* Loading Spinner */
+        .loading-spinner {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            border-top-color: var(--gold-primary);
+            animation: spin 1s ease-in-out infinite;
+            margin-right: 10px;
+        }
+
+        /* Offline Styles */
+        .offline-banner {
+            background: rgba(255, 107, 53, 0.1);
+            border: 1px solid var(--error);
+            color: var(--error);
+            padding: 20px;
+            border-radius: var(--radius);
+            margin: 20px 0;
+        }
+
+        .offline-btn {
+            background: var(--gold-gradient-subtle);
+            border: 1px solid rgba(212, 175, 55, 0.3);
+            color: var(--text-gold);
+            padding: 12px 20px;
+            border-radius: var(--radius);
+            margin: 10px;
+            cursor: pointer;
+            transition: var(--transition);
+        }
+
+        .offline-btn:hover {
+            background: var(--gold-gradient);
+            color: var(--dark-bg);
+        }
+
+        /* Trivia Styles */
+        .trivia-option {
+            background: var(--gold-gradient-subtle);
+            border: 1px solid rgba(212, 175, 55, 0.3);
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: var(--radius);
+            cursor: pointer;
+            transition: var(--transition);
+        }
+
+        .trivia-option:hover {
+            background: rgba(212, 175, 55, 0.2);
+        }
+
+        .trivia-correct {
+            background: rgba(0, 201, 177, 0.2);
+            border-color: var(--success);
+        }
+
+        .trivia-wrong {
+            background: rgba(255, 107, 53, 0.2);
+            border-color: var(--error);
+        }
+
+        /* Achievement Notification */
+        .achievement-notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: var(--gold-gradient);
+            color: var(--dark-bg);
+            padding: 20px;
+            border-radius: var(--radius);
+            box-shadow: var(--shadow-hover);
+            z-index: 1000;
+            animation: slideInRight 0.5s ease-out;
+        }
+
+        /* Game Animation */
+        .game-animation {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 999;
+            flex-direction: column;
+        }
+
+        .animation-content {
+            text-align: center;
+            color: white;
+        }
+
+        .animated-image {
+            font-size: 8rem;
+            margin-bottom: 20px;
+            animation: bounce 1s infinite;
+        }
+
+        .animation-text {
+            font-size: 2rem;
+            font-weight: bold;
+            text-shadow: 0 0 10px rgba(255, 215, 0, 0.8);
+        }
+
+        .rocket, .confetti {
+            position: absolute;
+            font-size: 2rem;
+            animation: floatUp 2s ease-out forwards;
+        }
+
+        .confetti {
+            width: 10px;
+            height: 10px;
+            border-radius: 2px;
+        }
+
+        /* Social Icons */
+        .socials {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin: 20px 0;
+        }
+
+        .social-icon {
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: var(--gold-gradient-subtle);
+            border-radius: 50%;
+            transition: var(--transition);
+        }
+
+        .social-icon:hover {
+            transform: translateY(-3px);
+            background: var(--gold-gradient);
+        }
+
+        .social-icon img {
+            width: 20px;
+            height: 20px;
+        }
+
+        /* Install Button */
+        #install-btn {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: var(--gold-gradient);
+            color: var(--dark-bg);
+            border: none;
+            padding: 10px 20px;
+            border-radius: 50px;
+            cursor: pointer;
+            box-shadow: var(--shadow);
+            display: none;
+            z-index: 100;
+            font-weight: 600;
+        }
+
+        /* Animations */
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.7; }
+            100% { opacity: 1; }
+        }
+
+        @keyframes slideInRight {
+            from { transform: translateX(100%); }
+            to { transform: translateX(0); }
+        }
+
+        @keyframes bounce {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-20px); }
+        }
+
+        @keyframes floatUp {
+            to {
+                transform: translateY(-100vh) rotate(360deg);
+                opacity: 0;
+            }
+        }
+
         @media (max-width: 480px) {
             h1 { font-size: 2.2rem; }
             .container { padding: 25px 15px; margin: 15px; }
@@ -2113,10 +3168,15 @@ base_html = """
             .welcome-section h2 { font-size: 1.5rem; }
             .welcome-section h3 { font-size: 1.3rem; }
             .cta-button { padding: 12px 30px; font-size: 1.1rem; }
+            .animated-image { font-size: 4rem; }
+            .animation-text { font-size: 1.5rem; }
+            #install-btn { top: 10px; right: 10px; padding: 8px 16px; font-size: 0.9rem; }
         }
     </style>
 </head>
 <body>
+    <button id="install-btn">📱 Install App</button>
+
     <div class="container">
         <div class="logo-container">
             <div class="logo">
@@ -2126,11 +3186,11 @@ base_html = """
             <p class="tagline">Play & Win Big with Golden Opportunities!</p>
         </div>
 
-        <!-- REMOVED: Fake balance display and promotional content -->
+        <p id="timestamp-display">Loading time...</p>
 
-        {% if error %}<p class="error">{{ error }}</p>{% endif %}  
-        {% if message %}<p class="message">{{ message }}</p>{% endif %}
-        {% if warning %}<p class="warning">{{ warning }}</p>{% endif %}
+        {% if error %}<div class="error">{{ error }}</div>{% endif %}  
+        {% if message %}<div class="message">{{ message }}</div>{% endif %}
+        {% if warning %}<div class="warning">{{ warning }}</div>{% endif %}
 
         {% if not session.get('user_id') %}
             <div class="welcome-section">
@@ -2147,8 +3207,31 @@ base_html = """
                     </a>
                 </div>
 
+                <div class="features-grid">
+                    <div class="feature-card">
+                        <div class="feature-icon">💰</div>
+                        <div class="feature-title">Win Real Cash</div>
+                        <div class="feature-desc">Play with just Ksh. 1.00 and win exciting cash prizes</div>
+                    </div>
+                    <div class="feature-card">
+                        <div class="feature-icon">⚡</div>
+                        <div class="feature-title">Fast Games</div>
+                        <div class="feature-desc">New games every 30 seconds with instant results</div>
+                    </div>
+                    <div class="feature-card">
+                        <div class="feature-icon">🛡️</div>
+                        <div class="feature-title">Secure & Safe</div>
+                        <div class="feature-desc">Advanced security with fair gameplay guaranteed</div>
+                    </div>
+                    <div class="feature-card">
+                        <div class="feature-icon">🏆</div>
+                        <div class="feature-title">Community</div>
+                        <div class="feature-desc">Join thousands of players winning together</div>
+                    </div>
+                </div>
+
                 <h3>How to Play</h3>
-                <ul style="text-align: left; display: inline-block;">
+                <ul style="text-align: left; display: inline-block; color: var(--text-muted);">
                     <li>Create your free account</li>
                     <li>Login to access games</li>
                     <li>Play with just Ksh. 1.00 per round</li>
@@ -2156,9 +3239,10 @@ base_html = """
                 </ul>
             </div>
         {% else %}
-            <p style="font-size: 1.3rem; color: var(--primary); font-weight: 700;">Welcome back, {{ session.get('username') }}! 👋</p>  
+            <p style="font-size: 1.3rem; color: var(--text-gold); font-weight: 700;">Welcome back, {{ session.get('username') }}! 👋</p>  
             <div class="balance-display">
-                💰 Wallet Balance: Ksh. {{ wallet_balance | default(0.0) | float | round(2) }}
+                <div class="balance-label">Your Wallet Balance</div>
+                <div class="balance-amount">Ksh. {{ wallet_balance | default(0.0) | float | round(2) }}</div>
             </div>
 
             <!-- Enrollment Status Display -->
@@ -2169,12 +3253,28 @@ base_html = """
             <!-- Protected Play Form -->
             <form method="POST" action="/play" id="playForm">  
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />  
-                <button type="submit" id="playButton" onclick="return handlePlayClick(event)">
+                <button type="submit" id="playButton" class="cta-button">
                     🎮 PLAY NOW & WIN BIG!
                 </button>  
             </form>
+            
+            {% if session.get('user_id') %}
+                <!-- ADD THESE BUTTONS AFTER THE PLAY BUTTON -->
+                <div style="margin: 15px 0; display: flex; gap: 10px; justify-content: center; flex-wrap: wrap;">
+                    <a href="/deposit" style="text-decoration: none;">
+                        <button class="cta-button" style="background: var(--success); margin: 5px;">
+                            💰 Deposit Funds
+                        </button>
+                    </a>
+                    <a href="/withdraw" style="text-decoration: none;">
+                        <button class="cta-button" style="background: var(--gold-gradient); margin: 5px;">
+                            📤 Withdraw Earnings
+                        </button>
+                    </a>
+                </div>
+            {% endif %}            
 
-            <a href="/logout" style="display: inline-block; margin-top: 15px;">Logout</a>  
+            <a href="/logout" style="display: inline-block; margin-top: 15px; color: var(--text-gold); text-decoration: none;">Logout</a>  
             
             <div class="game-window">  
                 <h2>Game Status</h2>  
@@ -2184,570 +3284,68 @@ base_html = """
             </div>  
         {% endif %}
 
-        <div class="footer">
-            <p>
-                <a href="/terms">Terms & Conditions</a> | 
-                <a href="/privacy">Privacy Policy</a> | 
-                <a href="/docs">Documentation</a>
-            </p>
-            <div class="socials">
-                <a href="https://m.facebook.com/jamesboyid.ochuna" target="_blank" title="Facebook" class="social-icon facebook">
-                    <img src="https://upload.wikimedia.org/wikipedia/commons/5/51/Facebook_f_logo_%282019%29.svg" alt="Facebook" />
-                </a>
-                <a href="https://wa.me/254701207062" target="_blank" title="WhatsApp" class="social-icon whatsapp">
-                    <img src="https://upload.wikimedia.org/wikipedia/commons/6/6b/WhatsApp.svg" alt="WhatsApp" />
-                </a>
-                <a href="tel:+254701207062" title="Call Us" class="social-icon phone">
-                    <img src="https://upload.wikimedia.org/wikipedia/commons/8/8c/Phone_font_awesome.svg" alt="Phone" />               
-                </a>  
-            </div>
-            <p style="text-align: center; font-size: 0.9rem; margin-top: 30px; color: var(--gray);">
-                © 2025 Pigasimu. All rights reserved.
-            </p>
-        </div>  
-    </div>  
-
-    <!-- Rest of the JavaScript code remains the same -->
-    <script>  
-        // Game Submission Protection System - IMPROVED VERSION
-        class SubmissionProtector {
-            constructor() {
-                this.isSubmitting = false;
-                this.submissionTimeout = null;
-                this.userEnrolled = false;
-                this.currentGame = null;
-                this.audioEnabled = false;
-            }
-
-            initialize() {
-                this.loadSubmissionState();
-                this.setupFormProtection();
-                this.setupBeforeUnload();
-                this.setupAudioPermission();
-            }
-
-            setupAudioPermission() {
-                // Enable audio on first user interaction
-                document.addEventListener('click', () => {
-                    this.audioEnabled = true;
-                }, { once: true });
-            }
-
-            loadSubmissionState() {
-                const savedState = sessionStorage.getItem('harambeeSubmissionState');
-                if (savedState) {
-                    try {
-                        const state = JSON.parse(savedState);
-                        this.isSubmitting = state.isSubmitting || false;
-                        this.userEnrolled = state.userEnrolled || false;
-                        
-                        if (this.isSubmitting) {
-                            this.disablePlayButton('⏳ Processing...');
-                        } else if (this.userEnrolled) {
-                            this.showEnrollmentStatus('✅ Already enrolled in current game');
-                            this.disablePlayButton('✅ Already Enrolled');
-                        }
-                    } catch (e) {
-                        console.error('Error loading submission state:', e);
-                        this.resetState();
-                    }
-                }
-            }
-
-            saveSubmissionState() {
-                const state = {
-                    isSubmitting: this.isSubmitting,
-                    userEnrolled: this.userEnrolled,
-                    timestamp: Date.now()
-                };
-                try {
-                    sessionStorage.setItem('harambeeSubmissionState', JSON.stringify(state));
-                } catch (e) {
-                    console.error('Error saving submission state:', e);
-                }
-            }
-
-            setupFormProtection() {
-                const form = document.getElementById('playForm');
-                const button = document.getElementById('playButton');
-
-                if (form && button) {
-                    form.addEventListener('submit', (e) => {
-                        if (this.isSubmitting || this.userEnrolled) {
-                            e.preventDefault();
-                            e.stopImmediatePropagation();
-                            return false;
-                        }
-                        
-                        return this.handleFormSubmission();
-                    });
-
-                    button.addEventListener('click', (e) => {
-                        if (this.isSubmitting || this.userEnrolled) {
-                            e.preventDefault();
-                            e.stopImmediatePropagation();
-                            return false;
-                        }
-                    }, true);
-                }
-            }
-
-            setupBeforeUnload() {
-                window.addEventListener('beforeunload', (e) => {
-                    if (this.isSubmitting) {
-                        e.preventDefault();
-                        e.returnValue = 'Your game enrollment is being processed. Are you sure you want to leave?';
-                        return e.returnValue;
-                    }
-                });
-            }
-
-            handleFormSubmission() {
-                if (this.isSubmitting || this.userEnrolled) {
-                    return false;
-                }
-
-                this.isSubmitting = true;
-                this.disablePlayButton('⏳ Processing...');
-                this.saveSubmissionState();
-
-                this.submissionTimeout = setTimeout(() => {
-                    if (this.isSubmitting) {
-                        this.isSubmitting = false;
-                        this.enablePlayButton();
-                        this.saveSubmissionState();
-                        this.showTemporaryMessage('Submission timeout. Please try again.', 'warning');
-                    }
-                }, 10000);
-
-                return true;
-            }
-
-            handleSubmissionSuccess(message = '✅ Successfully enrolled in the next game!') {
-                clearTimeout(this.submissionTimeout);
-                this.isSubmitting = false;
-                this.userEnrolled = true;
-                this.showEnrollmentStatus(message);
-                this.disablePlayButton('✅ Already Enrolled');
-                this.saveSubmissionState();
-
-                // Play success sound if audio is enabled
-                if (this.audioEnabled) {
-                    try {
-                        const audio = new Audio("data:audio/wav;base64,UklGRigAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQQAAAAAAA==");
-                        audio.play().catch(() => {});
-                    } catch (e) {}
-                }
-
-                // Auto-reset after 35 seconds
-                setTimeout(() => {
-                    this.userEnrolled = false;
-                    this.enablePlayButton();
-                    this.hideEnrollmentStatus();
-                    this.saveSubmissionState();
-                }, 35000);
-            }
-
-            handleSubmissionError() {
-                clearTimeout(this.submissionTimeout);
-                this.isSubmitting = false;
-                this.enablePlayButton();
-                this.saveSubmissionState();
-            }
-
-            disablePlayButton(text = '⏳ Processing...') {
-                const button = document.getElementById('playButton');
-                if (button) {
-                    button.disabled = true;
-                    button.innerHTML = `<span class="loading-spinner"></span>${text}`;
-                }
-            }
-
-            enablePlayButton() {
-                const button = document.getElementById('playButton');
-                if (button) {
-                    button.disabled = false;
-                    button.innerHTML = '🎮 PLAY NOW & WIN BIG!';
-                }
-            }
-
-            showEnrollmentStatus(message) {
-                const statusDiv = document.getElementById('enrollmentStatus');
-                const statusText = document.getElementById('statusText');
-                if (statusDiv && statusText) {
-                    statusText.textContent = message;
-                    statusDiv.style.display = 'block';
-                    statusDiv.style.animation = 'pulse 2s infinite';
-                }
-            }
-
-            hideEnrollmentStatus() {
-                const statusDiv = document.getElementById('enrollmentStatus');
-                if (statusDiv) {
-                    statusDiv.style.display = 'none';
-                }
-            }
-
-            showTemporaryMessage(message, type = 'error') {
-                const messageDiv = document.createElement('div');
-                messageDiv.className = type;
-                messageDiv.textContent = message;
-                messageDiv.style.margin = '10px 0';
-                
-                const container = document.querySelector('.container');
-                if (container) {
-                    container.insertBefore(messageDiv, container.firstChild);
-                    
-                    setTimeout(() => {
-                        if (messageDiv.parentNode) {
-                            messageDiv.parentNode.removeChild(messageDiv);
-                        }
-                    }, 5000);
-                }
-            }
-
-            resetState() {
-                this.isSubmitting = false;
-                this.userEnrolled = false;
-                clearTimeout(this.submissionTimeout);
-                this.enablePlayButton();
-                this.hideEnrollmentStatus();
-                try {
-                    sessionStorage.removeItem('harambeeSubmissionState');
-                } catch (e) {}
-            }
-        }
-
-        // Initialize submission protector
-        const submissionProtector = new SubmissionProtector();
-
-        if ('serviceWorker' in navigator) {  
-            navigator.serviceWorker.register('{{ url_for("static", filename="service-worker.js") }}')  
-                .then(reg => console.log('✅ Service Worker registered:', reg))  
-                .catch(err => console.log('❌ Service Worker registration failed:', err));  
-        }
-
-        function handlePlayClick(event) {
-            if (submissionProtector.isSubmitting || submissionProtector.userEnrolled) {
-                event.preventDefault();
-                event.stopImmediatePropagation();
-                return false;
-            }
-            return true;
-        }
-
-        document.addEventListener('DOMContentLoaded', function() {
-            // Initialize submission protection
-            submissionProtector.initialize();
-            
-            function updateLocalTime() {  
-                const time = new Date();  
-                const formatter = new Intl.DateTimeFormat('en-KE', {  
-                    dateStyle: 'full',  
-                    timeStyle: 'medium',  
-                    timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,  
-                    hour12: false  
-                });  
-                document.getElementById("timestamp-display").textContent =  
-                    `🕒 ${formatter.format(time)}`;  
-            }  
-
-            updateLocalTime();  
-            setInterval(updateLocalTime, 1000);  
-
-            {% if session.get('user_id') %}
-            function fetchGameData() {
-                fetch("/game_data")
-                    .then(response => {
-                        if (!response.ok) throw new Error('Network response was not ok');
-                        return response.json();
-                    })
-                    .then(data => {
-                        document.getElementById("next-game").textContent = data.upcoming_game
-                            ? `${data.upcoming_game.game_code} at ${data.upcoming_game.timestamp} (${data.upcoming_game.outcome_message})`
-                            : "No active game";
-
-                        let resultsContainer = document.getElementById("game-results");
-                        resultsContainer.innerHTML = "";
-                        data.completed_games.forEach(game => {
-                            resultsContainer.innerHTML += `
-                                <div class="game-result">
-                                    <p><strong>🎯 Game Code:</strong> ${game.game_code}</p>
-                                    <p><strong>🕒 Timestamp:</strong> ${game.timestamp}</p>
-                                    <p><strong>👥 Players:</strong> ${game.num_users}</p>
-                                    <p><strong>💰 Total Amount:</strong> ${game.total_amount}</p>
-                                    <p><strong>🏆 Winner:</strong> ${game.winner}</p>
-                                    <p><strong>🎁 Win Amount:</strong> ${game.winner_amount}</p>
-                                    <p><strong>📊 Outcome:</strong> ${game.outcome_message}</p>
-                                </div>
-                            `;
-                        });
-
-                        // Check if user is enrolled in current game
-                        if (data.current_user_queued) {
-                            submissionProtector.handleSubmissionSuccess('✅ Already enrolled in current game');
-                        }
-                    })
-                    .catch(error => {
-                        console.error("Error fetching game data:", error);
-                        document.getElementById("next-game").textContent = "Error loading game data";
-                    });
-            }
-
-            // Auto-refresh game data every 9 seconds
-            fetchGameData();  
-            setInterval(fetchGameData, 9000);
-
-            // Auto-clear messages after 9 seconds
-            setTimeout(() => {
-                const errorElements = document.querySelectorAll('.error');
-                const messageElements = document.querySelectorAll('.message');
-                const warningElements = document.querySelectorAll('.warning');
-                
-                errorElements.forEach(el => el.style.display = 'none');
-                messageElements.forEach(el => el.style.display = 'none');
-                warningElements.forEach(el => el.style.display = 'none');
-            }, 9000);
-            {% endif %}  
-
-            // Handle form submission responses
-            const urlParams = new URLSearchParams(window.location.search);
-            
-            if (urlParams.has('message')) {
-                const message = urlParams.get('message');
-                if (message.includes('Successfully enrolled') || message.includes('already enrolled')) {
-                    submissionProtector.handleSubmissionSuccess(message);
-                }
-            }
-            
-            if (urlParams.has('error')) {
-                submissionProtector.handleSubmissionError();
-            }
-        });
-    </script>
-<body>
-    <!-- Audio elements with improved error handling -->
-    <audio id="gameStartSound" preload="auto" onerror="handleAudioError('start')">
-        <source src="{{ url_for('static', filename='sounds/game_start.mp3') }}" type="audio/mpeg">
-    </audio>
-
-    <audio id="gameEndSound" preload="auto" onerror="handleAudioError('end')">
-        <source src="{{ url_for('static', filename='sounds/game_end.mp3') }}" type="audio/mpeg">
-    </audio>
-
-    <div id="gameAnimation" class="game-animation" style="display: none;">
-        <div class="animation-content">
-            <div class="animated-image" id="animatedImage">
-                🎮
-            </div>
-            <div class="animation-text" id="animationText"></div>
-        </div>
-    </div>
-
-    <div class="container">  
-        <button id="install-btn">📱 Install App</button>
-        
-        <div class="logo-container">
-            <img src="{{ url_for('static', filename='piclog.png') }}" alt="Harambee Cash Logo" class="logo" />  
-            <div class="badge">LIVE</div>
-        </div>
-        
-        <p id="timestamp-display">Loading time...</p>  
-        <h1>HARAMBEE CASH!</h1>
-        <p class="subtitle">Play. Win. Grow. Together!</p>
-        
+        <!-- Offline Content -->
         <div id="offlineBanner" class="offline-banner" style="display: none;">
             <h3>📶 You're Offline - But the Fun Continues!</h3>
             <p>Try these activities while you reconnect:</p>
         </div>
         
-        {% if error %}<p class="error">{{ error }}</p>{% endif %}  
-        {% if message %}<p class="message">{{ message }}</p>{% endif %}
-        {% if warning %}<p class="warning">{{ warning }}</p>{% endif %}
-
-        {% if not session.get('user_id') %}
-            <p>Ready to play and win? <a href="/register">Create your account now!</a></p> 
-            <p>Already registered? <a href="/login">Login to play</a></p>
-            
-            <div id="offlineEntertainment" style="display: none;">
-                <div class="game-window">
-                    <h2>🎮 Offline Fun Zone</h2>
-                    <div class="offline-options">
-                        <button class="offline-btn" onclick="startTriviaGame()">
-                            🧠 Trivia Challenge
-                        </button>
-                        <button class="offline-btn" onclick="showGamingTips()">
-                            📚 Gaming Tips
-                        </button>
-                        <button class="offline-btn" onclick="showPracticeMode()">
-                            💪 Practice Strategies
-                        </button>
-                    </div>
-                    <div id="offlineContent"></div>
+        <div id="offlineEntertainment" style="display: none;">
+            <div class="game-window">
+                <h2>🎮 {% if session.get('user_id') %}Offline Training Zone{% else %}Offline Fun Zone{% endif %}</h2>
+                <div class="offline-options">
+                    <button class="offline-btn" onclick="startTriviaGame()">
+                        🧠 {% if session.get('user_id') %}Harambee Trivia{% else %}Trivia Challenge{% endif %}
+                    </button>
+                    <button class="offline-btn" onclick="showGamingTips()">
+                        📚 {% if session.get('user_id') %}Winning Strategies{% else %}Gaming Tips{% endif %}
+                    </button>
+                    <button class="offline-btn" onclick="showPracticeMode()">
+                        💪 {% if session.get('user_id') %}Practice Games{% else %}Practice Strategies{% endif %}
+                    </button>
+                    {% if session.get('user_id') %}
+                    <button class="offline-btn" onclick="viewAchievements()">
+                        🏆 My Achievements
+                    </button>
+                    {% endif %}
                 </div>
+                <div id="offlineContent"></div>
             </div>
-            
-            <div class="welcome-section">
-                <h2>🎉 Welcome to Harambee Cash</h2>
-                <p style="text-align: center; font-size: 1.3rem; margin-bottom: 30px;">The Future of Community Gaming is Here.</p>
+        </div>
 
-                <h3>🚀 Join Thrilling Cash Games</h3>
-                <p>Every 30 seconds, new opportunities to win! Enter with just <strong>Ksh. 1.00</strong> and experience our fair, secure system with transparent rules and active oversight.</p>
-
-                <h3>🔐 Safe & Accountable</h3>
-                <ul>
-                    <li>Advanced password security with bcrypt hashing</li>
-                    <li>30-minute session timeout protection</li>
-                    <li>Robust input validation against attacks</li>
-                    <li>Secure admin wallet management</li>
-                </ul>
-
-                <h3>📈 Built for Growth</h3>
-                <ul>
-                    <li>Real-time game logs and results</li>
-                    <li>Full wallet system with deposits & withdrawals</li>
-                    <li>Comprehensive admin dashboard</li>
-                </ul>
-
-                <h3>🎯 Our Vision</h3>
-                <p>Empowering youth, creating jobs, and supporting innovation through exciting features:</p>
-                <ul>
-                    <li>Referral rewards program</li>
-                    <li>Email verification & 2FA for admins</li>
-                    <li>Achievement badges & leaderboards</li>
-                    <li>Real-time chatbot support</li>
-                    <li>Multi-language access</li>
-                    <li>Advanced analytics</li>
-                </ul>
-
-                <p style="margin-top: 30px; font-size: 1.2rem; text-align: center;"><strong>Ready for the next big thing in digital gaming?</strong></p>
-                <div style="text-align: center; margin-top: 20px;">
-                    <p style="margin-top: 8px;">— Fast, Free & Secure!</p>
-                </div>
-            </div>
-        {% else %}
-            <p style="font-size: 1.3rem; color: var(--primary); font-weight: 700;">Welcome back, {{ session.get('username') }}! 👋</p>  
-            <div class="balance-display">
-                💰 Wallet Balance: Ksh. {{ wallet_balance | default(0.0) | float | round(2) }}
-            </div>Traceback (most recent call last):
-            <!-- Enrollment Status Display -->
-            <div id="enrollmentStatus" class="enrollment-status" style="display: none;">
-                <span id="statusText"></span>
-            </div>
-
-            <!-- Protected Play Form -->
-            <form method="POST" action="/play" id="playForm">  
-                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />  
-                <button type="submit" id="playButton" onclick="return handlePlayClick(event)">
-                    🎮 PLAY NOW & WIN BIG!
-                </button>  
-            </form>
-
-            <a href="/logout" style="display: inline-block; margin-top: 15px;">Logout</a>  
-            
-            <div id="offlineEntertainment" style="display: none;">
-                <div class="game-window">
-                    <h2>🎮 Offline Training Zone</h2>
-                    <p>Practice makes perfect! Use this time to sharpen your skills.</p>
-                    <div class="offline-options">
-                        <button class="offline-btn" onclick="startTriviaGame()">
-                            🧠 Harambee Trivia
-                        </button>
-                        <button class="offline-btn" onclick="showGamingTips()">
-                            📚 Winning Strategies
-                        </button>
-                        <button class="offline-btn" onclick="showPracticeMode()">
-                            💪 Practice Games
-                        </button>
-                        <button class="offline-btn" onclick="viewAchievements()">
-                            🏆 My Achievements
-                        </button>
-                    </div>
-                    <div id="offlineContent"></div>
-                </div>
-            </div>
-            
-            <div class="game-window">  
-                <h2>Game Status</h2>  
-                <p><strong>Next Game:</strong> <span id="next-game">Loading...</span></p>  
-                <h2>Recent Results (Last 50 Games)</h2>  
-                <div id="game-results">Loading recent games...</div>  
-            </div>  
-            
-            <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-5190046541953794"
-            crossorigin="anonymous"></script>
-            <ins class="adsbygoogle"
-                style="display:block"
-                data-ad-client="ca-pub-5190046541953794"
-                data-ad-slot="2953235853"
-                data-ad-format="auto"
-                data-full-width-responsive="true"></ins>
-                
-            <div class="welcome-section">
-                <h2>🎉 Welcome to Harambee Cash</h2>
-                <p style="text-align: center; font-size: 1.3rem; margin-bottom: 30px;">The Future of Community Gaming is Here.</p>
-
-                <h3>🚀 Join Thrilling Cash Games</h3>
-                <p>Every 30 seconds, new opportunities to win! Enter with just <strong>Ksh. 1.00</strong> and experience our fair, secure system with transparent rules and active oversight.</p>
-
-                <h3>🔐 Safe & Accountable</h3>
-                <ul>
-                    <li>Advanced password security with bcrypt hashing</li>
-                    <li>30-minute session timeout protection</li>
-                    <li>Robust input validation against attacks</li>
-                    <li>Secure admin wallet management</li>
-                </ul>
-
-                <h3>📈 Built for Growth</h3>
-                <ul>
-                    <li>Real-time game logs and results</li>
-                    <li>Full wallet system with deposits & withdrawals</li>
-                    <li>Comprehensive admin dashboard</li>
-                </ul>
-
-                <h3>🎯 Our Vision</h3>
-                <p>Empowering youth, creating jobs, and supporting innovation through exciting features:</p>
-                <ul>
-                    <li>Referral rewards program</li>
-                    <li>Email verification & 2FA for admins</li>
-                    <li>Achievement badges & leaderboards</li>
-                    <li>Real-time chatbot support</li>
-                    <li>Multi-language access</li>
-                    <li>Advanced analytics</li>
-                </ul>
-
-                <p style="margin-top: 30px; font-size: 1.2rem; text-align: center;"><strong>Ready for the next big thing in digital gaming?</strong></p>
-                <div style="text-align: center; margin-top: 20px;">
-                    <p style="margin-top: 8px;">— Fast, Free & Secure!</p>
-                </div>
-            </div>
-        {% endif %}  
-
-        <div class="footer">  
+        <div class="footer">
             <p>
-                <a href="/terms">Terms & Conditions</a> | 
-                <a href="/privacy">Privacy Policy</a> | 
-                <a href="/docs">Documentation</a>
-            </p>  
-            <div class="socials">  
-                <a href="https://m.facebook.com/jamesboyid.ochuna" target="_blank" title="Facebook">  
-                    <img src="https://upload.wikimedia.org/wikipedia/commons/5/51/Facebook_f_logo_%282019%29.svg" alt="Facebook" />  
-                </a>  
-                <a href="https://wa.me/254701207062" target="_blank" title="WhatsApp">  
-                    <img src="https://upload.wikimedia.org/wikipedia/commons/6/6b/WhatsApp.svg" alt="WhatsApp" />  
-                </a>  
-                <a href="tel:+254701207062" title="Call Us">  
-                    <img src="https://upload.wikimedia.org/wikipedia/commons/8/8c/Phone_font_awesome.svg" alt="Phone" />  
+                <a href="/terms" style="color: var(--text-gold); text-decoration: none;">Terms & Conditions</a> | 
+                <a href="/privacy" style="color: var(--text-gold); text-decoration: none;">Privacy Policy</a> | 
+                <a href="/docs" style="color: var(--text-gold); text-decoration: none;">Documentation</a>
+            </p>
+            <div class="socials">
+                <a href="https://m.facebook.com/jamesboyid.ochuna" target="_blank" title="Facebook" class="social-icon">
+                    <img src="https://upload.wikimedia.org/wikipedia/commons/5/51/Facebook_f_logo_%282019%29.svg" alt="Facebook" />
+                </a>
+                <a href="https://wa.me/254701207062" target="_blank" title="WhatsApp" class="social-icon">
+                    <img src="https://upload.wikimedia.org/wikipedia/commons/6/6b/WhatsApp.svg" alt="WhatsApp" />
+                </a>
+                <a href="tel:+254701207062" title="Call Us" class="social-icon">
+                    <img src="https://upload.wikimedia.org/wikipedia/commons/8/8c/Phone_font_awesome.svg" alt="Phone" />               
                 </a>  
             </div>
-            <p style="text-align: center; font-size: 0.9rem; margin-top: 30px; color: var(--gray);">
+            <p style="text-align: center; font-size: 0.9rem; margin-top: 30px; color: var(--text-muted);">
                 © 2025 Pigasimu. All rights reserved.
             </p>
         </div>  
-    </div>  
+    </div>
+
+    <!-- Game Animation Elements -->
+    <div id="gameAnimation" class="game-animation">
+        <div class="animation-content">
+            <div class="animated-image" id="animatedImage">🎮</div>
+            <div class="animation-text" id="animationText"></div>
+        </div>
+    </div>
 
     <script>  
-        // Game Submission Protection System - IMPROVED VERSION
+        // Game Submission Protection System
         class SubmissionProtector {
             constructor() {
                 this.isSubmitting = false;
@@ -2765,7 +3363,6 @@ base_html = """
             }
 
             setupAudioPermission() {
-                // Enable audio on first user interaction
                 document.addEventListener('click', () => {
                     this.audioEnabled = true;
                 }, { once: true });
@@ -2869,15 +3466,10 @@ base_html = """
                 this.disablePlayButton('✅ Already Enrolled');
                 this.saveSubmissionState();
 
-                // Play success sound if audio is enabled
                 if (this.audioEnabled) {
-                    try {
-                        const audio = new Audio("data:audio/wav;base64,UklGRigAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQQAAAAAAA==");
-                        audio.play().catch(() => {});
-                    } catch (e) {}
+                    this.playSuccessSound();
                 }
 
-                // Auto-reset after 35 seconds
                 setTimeout(() => {
                     this.userEnrolled = false;
                     this.enablePlayButton();
@@ -2891,6 +3483,28 @@ base_html = """
                 this.isSubmitting = false;
                 this.enablePlayButton();
                 this.saveSubmissionState();
+            }
+
+            playSuccessSound() {
+                try {
+                    const context = new (window.AudioContext || window.webkitAudioContext)();
+                    const oscillator = context.createOscillator();
+                    const gainNode = context.createGain();
+                    
+                    oscillator.connect(gainNode);
+                    gainNode.connect(context.destination);
+                    
+                    oscillator.frequency.value = 800;
+                    oscillator.type = 'sine';
+                    
+                    gainNode.gain.setValueAtTime(0.3, context.currentTime);
+                    gainNode.gain.exponentialRampToValueAtTime(0.01, context.currentTime + 0.5);
+                    
+                    oscillator.start(context.currentTime);
+                    oscillator.stop(context.currentTime + 0.5);
+                } catch (e) {
+                    console.log('Web Audio API not supported');
+                }
             }
 
             disablePlayButton(text = '⏳ Processing...') {
@@ -2915,7 +3529,6 @@ base_html = """
                 if (statusDiv && statusText) {
                     statusText.textContent = message;
                     statusDiv.style.display = 'block';
-                    statusDiv.style.animation = 'pulse 2s infinite';
                 }
             }
 
@@ -2956,42 +3569,132 @@ base_html = """
             }
         }
 
-        // Initialize submission protector
-        const submissionProtector = new SubmissionProtector();
-
-        if ('serviceWorker' in navigator) {  
-            navigator.serviceWorker.register('{{ url_for("static", filename="service-worker.js") }}')  
-                .then(reg => console.log('✅ Service Worker registered:', reg))  
-                .catch(err => console.log('❌ Service Worker registration failed:', err));  
-        }
-
-        function handlePlayClick(event) {
-            if (submissionProtector.isSubmitting || submissionProtector.userEnrolled) {
-                event.preventDefault();
-                event.stopImmediatePropagation();
-                return false;
+        // Game Animator Class
+        class GameAnimator {
+            constructor() {
+                this.animation = document.getElementById('gameAnimation');
+                this.animatedImage = document.getElementById('animatedImage');
+                this.animationText = document.getElementById('animationText');
+                this.lastGameStatus = null;
+                this.animationActive = false;
             }
-            return true;
-        }
 
-        function handleAudioError(type) {
-            console.log(`Audio ${type} failed to load, using fallback`);
-        }
+            async playGameStart(gameCode) {
+                if (this.animationActive) return;
+                this.animationActive = true;
+                
+                this.animatedImage.innerHTML = '🚀';
+                this.animationText.textContent = `GAME ${gameCode} STARTED!`;
+                this.animation.className = 'game-animation game-start';
+                this.animation.style.display = 'flex';
+                
+                this.createRocketEffect();
+                
+                setTimeout(() => {
+                    this.hideAnimation();
+                }, 3000);
+            }
 
-        function updateOnlineStatus() {
-            const offlineBanner = document.getElementById('offlineBanner');
-            const offlineEntertainment = document.getElementById('offlineEntertainment');
-            
-            if (!navigator.onLine) {
-                offlineBanner.style.display = 'block';
-                offlineEntertainment.style.display = 'block';
-                unlockAchievement('offline_explorer');
-            } else {
-                offlineBanner.style.display = 'none';
-                offlineEntertainment.style.display = 'none';
+            async playGameEnd(gameCode, winner, amount) {
+                if (this.animationActive) return;
+                this.animationActive = true;
+                
+                this.animatedImage.innerHTML = '🎉';
+                this.animationText.textContent = `WINNER: ${winner} 🏆 Ksh.${amount}`;
+                this.animation.className = 'game-animation game-end';
+                this.animation.style.display = 'flex';
+                
+                this.createConfettiEffect();
+                
+                setTimeout(() => {
+                    this.hideAnimation();
+                    if (window.submissionProtector) {
+                        window.submissionProtector.resetState();
+                    }
+                }, 4000);
+            }
+
+            createRocketEffect() {
+                for (let i = 0; i < 3; i++) {
+                    setTimeout(() => {
+                        const rocket = document.createElement('div');
+                        rocket.className = 'rocket';
+                        rocket.innerHTML = '🚀';
+                        rocket.style.left = `${20 + i * 30}%`;
+                        this.animation.appendChild(rocket);
+                        
+                        setTimeout(() => {
+                            if (rocket.parentNode) {
+                                rocket.parentNode.removeChild(rocket);
+                            }
+                        }, 2000);
+                    }, i * 300);
+                }
+            }
+
+            createConfettiEffect() {
+                const colors = ['#FF6B35', '#00C9B1', '#FFD166', '#4ECDC4', '#FFE66D'];
+                for (let i = 0; i < 50; i++) {
+                    setTimeout(() => {
+                        const confetti = document.createElement('div');
+                        confetti.className = 'confetti';
+                        confetti.style.left = `${Math.random() * 100}%`;
+                        confetti.style.background = colors[Math.floor(Math.random() * colors.length)];
+                        confetti.style.animationDelay = `${Math.random() * 2}s`;
+                        this.animation.appendChild(confetti);
+                        
+                        setTimeout(() => {
+                            if (confetti.parentNode) {
+                                confetti.parentNode.removeChild(confetti);
+                            }
+                        }, 3000);
+                    }, i * 50);
+                }
+            }
+
+            hideAnimation() {
+                this.animation.style.display = 'none';
+                const effects = this.animation.querySelectorAll('.confetti, .rocket');
+                effects.forEach(effect => {
+                    if (effect.parentNode) {
+                        effect.parentNode.removeChild(effect);
+                    }
+                });
+                this.animationActive = false;
+            }
+
+            monitorGameStatus() {
+                setInterval(() => {
+                    if (!navigator.onLine) return;
+                    
+                    fetch('/game_data')
+                        .then(response => {
+                            if (!response.ok) throw new Error('Network error');
+                            return response.json();
+                        })
+                        .then(data => {
+                            if (data.in_progress_game) {
+                                const currentGame = data.in_progress_game;
+                                
+                                if (currentGame.status === 'in progress' && 
+                                    (!this.lastGameStatus || this.lastGameStatus.status !== 'in progress')) {
+                                    this.playGameStart(currentGame.game_code);
+                                }
+                                
+                                if (currentGame.status === 'completed' && 
+                                    this.lastGameStatus && this.lastGameStatus.status === 'in progress') {
+                                    this.playGameEnd(currentGame.game_code, currentGame.winner, currentGame.winner_amount);
+                                }
+                                
+                                this.lastGameStatus = {...currentGame};
+                            }
+                        })
+                        .catch(error => console.error('Error monitoring game status:', error));
+                }, 2000);
             }
         }
 
+        // Offline Entertainment Features
         const triviaQuestions = [
             {
                 question: "What is the minimum play amount in Harambee Cash?",
@@ -3014,6 +3717,29 @@ base_html = """
                 answer: 0
             }
         ];
+
+        const achievements = {
+            'offline_explorer': { 
+                name: 'Offline Explorer', 
+                description: 'Used the app while offline',
+                unlocked: false 
+            },
+            'trivia_master': { 
+                name: 'Trivia Master', 
+                description: 'Got perfect score in trivia',
+                unlocked: false 
+            },
+            'knowledge_seeker': { 
+                name: 'Knowledge Seeker', 
+                description: 'Read all gaming tips',
+                unlocked: false 
+            },
+            'app_installer': {
+                name: 'App Installer',
+                description: 'Installed the PWA app',
+                unlocked: false
+            }
+        };
 
         let currentTriviaQuestion = 0;
         let triviaScore = 0;
@@ -3173,24 +3899,6 @@ base_html = """
             `;
         }
 
-        const achievements = {
-            'offline_explorer': { 
-                name: 'Offline Explorer', 
-                description: 'Used the app while offline',
-                unlocked: false 
-            },
-            'trivia_master': { 
-                name: 'Trivia Master', 
-                description: 'Got perfect score in trivia',
-                unlocked: false 
-            },
-            'knowledge_seeker': { 
-                name: 'Knowledge Seeker', 
-                description: 'Read all gaming tips',
-                unlocked: false 
-            }
-        };
-
         function unlockAchievement(achievementId) {
             if (achievements[achievementId] && !achievements[achievementId].unlocked) {
                 achievements[achievementId].unlocked = true;
@@ -3228,7 +3936,7 @@ base_html = """
             Object.keys(achievements).forEach(achievementId => {
                 const achievement = achievements[achievementId];
                 html += `
-                    <div style="padding: 15px; margin: 10px 0; background: ${achievement.unlocked ? 'var(--success)' : 'var(--gray)'}; color: white; border-radius: 10px;">
+                    <div style="padding: 15px; margin: 10px 0; background: ${achievement.unlocked ? 'var(--success)' : 'var(--dark-card)'}; color: white; border-radius: 10px; border: 1px solid ${achievement.unlocked ? 'var(--success)' : 'var(--text-muted)'};">
                         <strong>${achievement.unlocked ? '✅' : '🔒'} ${achievement.name}</strong>
                         <p style="margin: 5px 0 0 0; font-size: 0.9rem;">${achievement.description}</p>
                     </div>
@@ -3263,28 +3971,42 @@ base_html = """
             }
         }
 
-        window.addEventListener('online', updateOnlineStatus);
-        window.addEventListener('offline', updateOnlineStatus);
-        
-        document.addEventListener('DOMContentLoaded', function() {
-            // Initialize submission protection
-            submissionProtector.initialize();
+        function updateOnlineStatus() {
+            const offlineBanner = document.getElementById('offlineBanner');
+            const offlineEntertainment = document.getElementById('offlineEntertainment');
             
-            updateOnlineStatus();
-            loadAchievements();
-            
-            function updateLocalTime() {  
-                const time = new Date();  
-                const formatter = new Intl.DateTimeFormat('en-KE', {  
-                    dateStyle: 'full',  
-                    timeStyle: 'medium',  
-                    timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,  
-                    hour12: false  
-                });  
-                document.getElementById("timestamp-display").textContent =  
-                    `🕒 ${formatter.format(time)}`;  
-            }  
+            if (!navigator.onLine) {
+                offlineBanner.style.display = 'block';
+                offlineEntertainment.style.display = 'block';
+                unlockAchievement('offline_explorer');
+            } else {
+                offlineBanner.style.display = 'none';
+                offlineEntertainment.style.display = 'none';
+            }
+        }
 
+        function handlePlayClick(event) {
+            if (submissionProtector.isSubmitting || submissionProtector.userEnrolled) {
+                event.preventDefault();
+                event.stopImmediatePropagation();
+                return false;
+            }
+            return true;
+        }
+
+        // Initialize everything when DOM is loaded
+        document.addEventListener('DOMContentLoaded', function() {
+            const submissionProtector = new SubmissionProtector();
+            submissionProtector.initialize();
+
+            // PWA Service Worker
+            if ('serviceWorker' in navigator) {  
+                navigator.serviceWorker.register('{{ url_for("static", filename="service-worker.js") }}')  
+                    .then(reg => console.log('✅ Service Worker registered:', reg))  
+                    .catch(err => console.log('❌ Service Worker registration failed:', err));  
+            }
+
+            // PWA Install Prompt
             let deferredPrompt;
             const installBtn = document.getElementById('install-btn');
             
@@ -3311,10 +4033,32 @@ base_html = """
                 installBtn.style.display = 'none';
             });
 
+            // Network status monitoring
+            window.addEventListener('online', updateOnlineStatus);
+            window.addEventListener('offline', updateOnlineStatus);
+            updateOnlineStatus();
+
+            // Load achievements
+            loadAchievements();
+
+            // Time display
+            function updateLocalTime() {  
+                const time = new Date();  
+                const formatter = new Intl.DateTimeFormat('en-KE', {  
+                    dateStyle: 'full',  
+                    timeStyle: 'medium',  
+                    timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,  
+                    hour12: false  
+                });  
+                document.getElementById("timestamp-display").textContent =  
+                    `🕒 ${formatter.format(time)}`;  
+            }  
+
             updateLocalTime();  
             setInterval(updateLocalTime, 1000);  
 
             {% if session.get('user_id') %}
+            // Game data fetching for logged-in users
             function fetchGameData() {
                 fetch("/game_data")
                     .then(response => {
@@ -3342,7 +4086,6 @@ base_html = """
                             `;
                         });
 
-                        // Check if user is enrolled in current game
                         if (data.current_user_queued) {
                             submissionProtector.handleSubmissionSuccess('✅ Already enrolled in current game');
                         }
@@ -3353,11 +4096,16 @@ base_html = """
                     });
             }
 
-            // Auto-refresh game data every 9 seconds
             fetchGameData();  
             setInterval(fetchGameData, 9000);
 
-            // Auto-clear messages after 9 seconds
+            // Initialize game animator
+            const gameAnimator = new GameAnimator();
+            gameAnimator.monitorGameStatus();
+            window.gameAnimator = gameAnimator;
+            {% endif %}  
+
+            // Auto-clear messages
             setTimeout(() => {
                 const errorElements = document.querySelectorAll('.error');
                 const messageElements = document.querySelectorAll('.message');
@@ -3367,160 +4115,8 @@ base_html = """
                 messageElements.forEach(el => el.style.display = 'none');
                 warningElements.forEach(el => el.style.display = 'none');
             }, 9000);
-            {% endif %}  
 
-            const gameAnimator = new GameAnimator();
-            gameAnimator.monitorGameStatus();
-            
-            window.gameAnimator = gameAnimator;
-            window.submissionProtector = submissionProtector;
-        });
-
-        class GameAnimator {
-            constructor() {
-                this.startSound = document.getElementById('gameStartSound');
-                this.endSound = document.getElementById('gameEndSound');
-                this.animation = document.getElementById('gameAnimation');
-                this.animatedImage = document.getElementById('animatedImage');
-                this.animationText = document.getElementById('animationText');
-                this.lastGameStatus = null;
-                this.animationActive = false;
-            }
-
-            async playGameStart(gameCode) {
-                if (this.animationActive) return;
-                this.animationActive = true;
-                
-                try {
-                    if (submissionProtector.audioEnabled) {
-                        await this.startSound.play();
-                    }
-                } catch (e) {
-                    console.log('Game start audio play failed:', e);
-                }
-                
-                this.animatedImage.innerHTML = '🚀';
-                this.animationText.textContent = `GAME ${gameCode} STARTED!`;
-                this.animation.className = 'game-animation game-start';
-                this.animation.style.display = 'flex';
-                
-                this.createRocketEffect();
-                
-                setTimeout(() => {
-                    this.hideAnimation();
-                }, 3000);
-            }
-
-            async playGameEnd(gameCode, winner, amount) {
-                if (this.animationActive) return;
-                this.animationActive = true;
-                
-                try {
-                    if (submissionProtector.audioEnabled) {
-                        await this.endSound.play();
-                    }
-                } catch (e) {
-                    console.log('Game end audio play failed:', e);
-                }
-                
-                this.animatedImage.innerHTML = '🎉';
-                this.animationText.textContent = `WINNER: ${winner} 🏆 Ksh.${amount}`;
-                this.animation.className = 'game-animation game-end';
-                this.animation.style.display = 'flex';
-                
-                this.createConfettiEffect();
-                
-                setTimeout(() => {
-                    this.hideAnimation();
-                    // Reset enrollment status when game completes
-                    if (window.submissionProtector) {
-                        window.submissionProtector.resetState();
-                    }
-                }, 4000);
-            }
-
-            createRocketEffect() {
-                for (let i = 0; i < 3; i++) {
-                    setTimeout(() => {
-                        const rocket = document.createElement('div');
-                        rocket.className = 'rocket';
-                        rocket.innerHTML = '🚀';
-                        rocket.style.left = `${20 + i * 30}%`;
-                        this.animation.appendChild(rocket);
-                        
-                        setTimeout(() => {
-                            if (rocket.parentNode) {
-                                rocket.parentNode.removeChild(rocket);
-                            }
-                        }, 2000);
-                    }, i * 300);
-                }
-            }
-
-            createConfettiEffect() {
-                const colors = ['#FF6B35', '#00C9B1', '#FFD166', '#4ECDC4', '#FFE66D'];
-                for (let i = 0; i < 50; i++) {
-                    setTimeout(() => {
-                        const confetti = document.createElement('div');
-                        confetti.className = 'confetti';
-                        confetti.style.left = `${Math.random() * 100}%`;
-                        confetti.style.background = colors[Math.floor(Math.random() * colors.length)];
-                        confetti.style.animationDelay = `${Math.random() * 2}s`;
-                        this.animation.appendChild(confetti);
-                        
-                        setTimeout(() => {
-                            if (confetti.parentNode) {
-                                confetti.parentNode.removeChild(confetti);
-                            }
-                        }, 3000);
-                    }, i * 50);
-                }
-            }
-
-            hideAnimation() {
-                this.animation.style.display = 'none';
-                const effects = this.animation.querySelectorAll('.confetti, .rocket');
-                effects.forEach(effect => {
-                    if (effect.parentNode) {
-                        effect.parentNode.removeChild(effect);
-                    }
-                });
-                this.animationActive = false;
-            }
-
-            monitorGameStatus() {
-                setInterval(() => {
-                    if (!navigator.onLine) return;
-                    
-                    fetch('/game_data')
-                        .then(response => {
-                            if (!response.ok) throw new Error('Network error');
-                            return response.json();
-                        })
-                        .then(data => {
-                            if (data.in_progress_game) {
-                                const currentGame = data.in_progress_game;
-                                
-                                if (currentGame.status === 'in progress' && 
-                                    (!this.lastGameStatus || this.lastGameStatus.status !== 'in progress')) {
-                                    this.playGameStart(currentGame.game_code);
-                                }
-                                
-                                if (currentGame.status === 'completed' && 
-                                    this.lastGameStatus && this.lastGameStatus.status === 'in progress') {
-                                    this.playGameEnd(currentGame.game_code, currentGame.winner, currentGame.winner_amount);
-                                }
-                                
-                                this.lastGameStatus = {...currentGame};
-                            }
-                        })
-                        .catch(error => console.error('Error monitoring game status:', error));
-                }, 2000);
-            }
-        }
-
-        // Handle form submission responses
-        document.addEventListener('DOMContentLoaded', function() {
+            // Handle URL parameters for form responses
             const urlParams = new URLSearchParams(window.location.search);
             
             if (urlParams.has('message')) {
@@ -3533,6 +4129,10 @@ base_html = """
             if (urlParams.has('error')) {
                 submissionProtector.handleSubmissionError();
             }
+
+            // Make objects globally available
+            window.submissionProtector = submissionProtector;
+            window.handlePlayClick = handlePlayClick;
         });
     </script>
 </body>  
