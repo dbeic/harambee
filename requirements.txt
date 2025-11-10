@@ -23,7 +23,7 @@ psycopg2-binary==2.9.10
 Pygments==2.19.2
 python-dotenv==0.21.0
 pytz==2023.3
-requests==2.31.0
+requests==2.32.4
 rich==12.6.0
 setuptools==80.9.0
 six==1.17.0
