@@ -22,13 +22,11 @@ from werkzeug.security import generate_password_hash, check_password_hash
 from flask import send_from_directory
 from flask_wtf.csrf import CSRFProtect
 from datetime import datetime, timedelta, timezone
+from game_worker import run_game
 
 now = datetime.now()
 now_str = now.strftime("%Y-%m-%d %H:%M:%S")  # convert to string
 date_part = now_str.split(" ")[0]  # now you can safely split
-
-from shared import get_db_connection
-from game_worker import run_game
 
 # --- Configuration & logging ---
 logging.basicConfig(level=logging.DEBUG, format="%(asctime)s - %(levelname)s - %(message)s")
@@ -258,17 +256,6 @@ def init_db():
 
 init_db()
 
-def get_wallet_balance(user_id):
-    try:
-        with get_db_connection() as conn:
-            cursor = conn.cursor()
-            cursor.execute("SELECT wallet FROM users WHERE id = %s", (user_id,))
-            result = cursor.fetchone()
-            return float(result[0]) if result else 0.0
-    except Exception as e:
-        logging.error(f"Error getting wallet balance: {e}")
-        return 0.0
-
 # --- Wallet & transactions ---
 def get_wallet_balance(user_id):
     if not user_id:
@@ -358,6 +345,7 @@ def static_files(filename):
     return send_from_directory("static", filename)
 
 
+#Routes
 @app.route("/")
 def index():
     if 'user_id' in session:
@@ -368,21 +356,6 @@ def index():
     return render_template_string(base_html, 
                                 wallet_balance=wallet_balance,
                                 session=session)
-
-# --- Routes ---
-@app.route("/", methods=["GET"])
-def index():
-    # Do not call log_visit() here â€” visit logging handled by before_request hooks to avoid duplicate records.
-    error = request.args.get("error")
-    message = request.args.get("message")
-    user_id = session.get("user_id")
-    wallet_balance = get_wallet_balance(user_id) if user_id else 0.0
-    return render_template_string(base_html,
-                                  error=error,
-                                  message=message,
-                                  timestamp=get_timestamp(),
-                                  wallet_balance=wallet_balance)
-
 
 @app.route("/admin/login", methods=["GET", "POST"])
 @limiter.limit("5 per minute")
