@@ -18,6 +18,7 @@ from game_worker import run_game
 import threading
 from shared import get_db_connection
 import string
+from functools import wraps
 import secrets
 from werkzeug.security import generate_password_hash, check_password_hash
 from flask import send_from_directory
