@@ -657,6 +657,7 @@ def game_data():
 
 @app.route("/play", methods=["POST"])
 @limiter.limit("3 per minute")
+@csrf.protect
 def play():
     user_id = session.get("user_id")
     if not user_id:
@@ -2661,8 +2662,8 @@ base_html = """
         }
         
         .logo {
-            width: 120px;
-            height: 120px;
+            width: 150px;
+            height: 150px;
             margin: 0 auto 15px;
         }        
 
@@ -2676,8 +2677,9 @@ base_html = """
         .logo-img {
             width: 100%;
             height: 100%;
-            object-fit: contain;   /* keeps natural proportions */
-            border-radius: 50%;    /* optional: matches your round logo frame */
+            object-fit: contain;
+            border-radius: 50%;
+            filter: none !important;
         }
 
         .tagline {
@@ -3088,7 +3090,7 @@ base_html = """
         @media (max-width: 480px) {
             h1 { font-size: 2.2rem; }
             .container { padding: 25px 15px; margin: 15px; }
-            .logo { width: 100px; height: 100px; }
+            .logo { width: 130px; height: 130px; }
             .logo-text { font-size: 1.6rem; }
             .balance-display { font-size: 1.2rem; min-width: 200px; padding: 15px; }
             .balance-amount { font-size: 1.8rem; }
@@ -3105,7 +3107,7 @@ base_html = """
     <button id="install-btn">📱 Install App</button>
 
     <div class="logo">
-        <img src="{{ url_for('static', filename='piclog.png') }}" alt="Harambee Cash Logo" class="logo-img">
+        <img src="{{ url_for('static', filename='piclog.png') }}" alt="Harambee Cash Logo" class="logo-img" style="filter: none !important;">
     </div>
 
         <p id="timestamp-display">Loading time...</p>
