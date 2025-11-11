@@ -657,7 +657,6 @@ def game_data():
 
 @app.route("/play", methods=["POST"])
 @limiter.limit("3 per minute")
-@csrf.protect
 def play():
     user_id = session.get("user_id")
     if not user_id:
