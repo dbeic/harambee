@@ -1,9 +1,9 @@
-#Reverted to 2
 import os
+import psycopg2
+from psycopg2 import errors
 import json
 import random
 import time
-import psycopg2
 import logging
 from flask import Flask, request, render_template_string, session, redirect, url_for, jsonify, Response, stream_with_context, flash
 from threading import Thread, Event
@@ -105,7 +105,7 @@ def init_db():
                 ip_address TEXT,
                 user_agent TEXT,
                 referrer TEXT,
-                path TEXT,  -- This should be 'path' not 'page'
+                path TEXT,
                 timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
         """)
@@ -247,6 +247,15 @@ def init_db():
                 (20001, 50000, 100, 0, TRUE)
             """)        
         conn.commit()
+        
+        # Add performance indexes
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_game_queue_user_id ON game_queue(user_id)")
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_users_id ON users(id)")
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_transactions_user_id ON transactions(user_id)")
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_results_status ON results(status)")
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_withdrawal_requests_user_id ON withdrawal_requests(user_id)")
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_deposit_requests_user_id ON deposit_requests(user_id)")        
+        
         cursor.execute("SELECT id FROM admins WHERE username = %s LIMIT 1", (ADMIN_USERNAME,))
         exists = cursor.fetchone()
         if not exists:
@@ -257,15 +266,33 @@ def init_db():
 
 init_db()
 
+
 # --- Wallet & transactions ---
+def validate_wallet_sufficient(user_id, amount):
+    """Check if user has sufficient wallet balance"""
+    try:
+        balance = get_wallet_balance(user_id)
+        return balance >= amount
+    except Exception as e:
+        logging.error(f"Error validating wallet for user {user_id}: {e}")
+        return False
+
 def get_wallet_balance(user_id):
     if not user_id:
         return 0.0
-    with get_db_connection() as conn:
-        cursor = conn.cursor()
-        cursor.execute("SELECT wallet FROM users WHERE id = %s", (user_id,))
-        result = cursor.fetchone()
-        return float(result[0]) if result and result[0] is not None else 0.0
+    try:
+        with get_db_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("SELECT wallet FROM users WHERE id = %s", (user_id,))
+            result = cursor.fetchone()
+            if result and result[0] is not None:
+                return float(result[0])
+            else:
+                logging.warning(f"User {user_id} not found or has null wallet balance")
+                return 0.0
+    except Exception as e:
+        logging.error(f"Error getting wallet balance for user {user_id}: {e}")
+        return 0.0
 
 def update_wallet(user_id, amount):
     with get_db_connection() as conn:
@@ -284,8 +311,9 @@ def log_transaction(user_id, transaction_type, amount):
             conn.commit()
     except Exception as e:
         logging.error(f"Error in log_transaction(): {e}")
-        
-def log_visit_entry(ip_address, user_agent, referrer=None, path=None, timestamp=None):
+
+# --- Logging visitors / activity ---
+def log_visit_entry(ip_address, user_agent, referrer=None, page=None, timestamp=None):
     # Ensure timestamp is always a string
     if timestamp is None:
         ts = datetime.now().strftime("%Y-%m-%d %H:%M:%S.%f")
@@ -294,15 +322,14 @@ def log_visit_entry(ip_address, user_agent, referrer=None, path=None, timestamp=
     else:
         ts = str(timestamp)
 
-    # Insert visit log into the database - FIXED: use 'path' instead of 'page'
+    # Insert visit log into the database
     with get_db_connection() as conn:
         cursor = conn.cursor()
         cursor.execute("""
-            INSERT INTO visit_logs (ip_address, user_agent, referrer, path, timestamp)
+            INSERT INTO visit_logs (ip_address, user_agent, referrer, page, timestamp)
             VALUES (%s, %s, %s, %s, %s)
-        """, (ip_address, user_agent, referrer, path, ts))
-        conn.commit()        
-        
+        """, (ip_address, user_agent, referrer, page, ts))
+        conn.commit()
 
 @app.before_request
 def log_user_activity():
@@ -600,15 +627,10 @@ def game_data():
                 for game in completed_games
             ]
 
-            # FIXED: Check if current user is queued for CURRENT game (last 35 seconds)
+            # Check if current user is queued using your game_queue table
             current_user_queued = False
             if session.get('user_id'):
-                cursor.execute("""
-                    SELECT COUNT(*) 
-                    FROM game_queue 
-                    WHERE user_id = %s 
-                    AND timestamp >= NOW() - INTERVAL '35 seconds'
-                """, (session['user_id'],))
+                cursor.execute("SELECT COUNT(*) FROM game_queue WHERE user_id = %s", (session['user_id'],))
                 current_user_queued = cursor.fetchone()[0] > 0
 
         response_data = {
@@ -634,67 +656,53 @@ def game_data():
         }), 500
 
 @app.route("/play", methods=["POST"])
-@limiter.limit("3 per minute; 1 per 10 seconds", key_func=lambda: f"{session.get('user_id')}_{get_remote_address()}")
+@limiter.limit("3 per minute")
+@csrf.protect
 def play():
     user_id = session.get("user_id")
     if not user_id:
         return redirect(url_for("index", error="You must be logged in to play."))
 
     wallet_balance = get_wallet_balance(user_id)
-    if wallet_balance is None or wallet_balance < 1.0:
+    if wallet_balance < 1.0:
         return redirect(url_for("index", error="Insufficient funds. Please deposit."))
 
-    conn = None 
     try:
         with get_db_connection() as conn:
             cursor = conn.cursor()
 
-            # Check if user is already in queue for CURRENT game
-            cursor.execute("""
-                SELECT gq.user_id 
-                FROM game_queue gq 
-                JOIN results r ON gq.timestamp >= NOW() - INTERVAL '35 seconds'
-                WHERE gq.user_id = %s
-                LIMIT 1
-            """, (user_id,))
+            # Check if user is already in queue
+            cursor.execute("SELECT user_id FROM game_queue WHERE user_id = %s", (user_id,))
             if cursor.fetchone():
                 return redirect(url_for("index", message="Already enrolled in current game"))
 
-            # DEDUCTION: Deduct 1 unit from wallet
+            # DEDUCTION with balance validation
             cursor.execute("UPDATE users SET wallet = wallet - 1.0 WHERE id = %s AND wallet >= 1.0", (user_id,))
             
             # Verify deduction was successful
             if cursor.rowcount == 0:
-                return redirect(url_for("index", error="Deduction failed. Insufficient balance."))
-            
+                # Re-check balance to provide accurate error message
+                cursor.execute("SELECT wallet FROM users WHERE id = %s", (user_id,))
+                current_balance = cursor.fetchone()[0]
+                return redirect(url_for("index", error=f"Insufficient funds. Current balance: Ksh. {current_balance:.2f}"))
+
             # Record transaction
-            cursor.execute("""
-                INSERT INTO transactions (user_id, type, amount, timestamp)
-                VALUES (%s, 'game_entry', %s, %s)
-            """, (user_id, -1.0, get_timestamp()))
+            cursor.execute("INSERT INTO transactions (user_id, type, amount, timestamp) VALUES (%s, 'game_entry', %s, %s)",
+                          (user_id, -1.0, get_timestamp()))
             
             # Add to game queue
-            cursor.execute("""
-                INSERT INTO game_queue (user_id, timestamp)
-                VALUES (%s, %s)
-            """, (user_id, get_timestamp()))
-            
+            cursor.execute("INSERT INTO game_queue (user_id, timestamp) VALUES (%s, %s)",
+                          (user_id, get_timestamp()))
             conn.commit()
 
-            return redirect(url_for("index", message="Successfully enrolled in the next game! Ksh. 1.00 deducted."))
+            return redirect(url_for("index", message="Successfully enrolled in the next game!"))
 
     except psycopg2.IntegrityError:
-        if conn:
-            conn.rollback()
         return redirect(url_for("index", message="Already enrolled in current game"))
     except psycopg2.Error as e:
-        if conn:
-            conn.rollback()
         logging.error(f"Database error during enrollment: {str(e)}") 
         return redirect(url_for("index", error="An error occurred while enrolling. Please try again."))
     except Exception as e:
-        if conn:
-            conn.rollback()
         logging.error(f"Unexpected error during enrollment: {str(e)}")
         return redirect(url_for("index", error="An unexpected error occurred. Please try again."))
 
@@ -2401,6 +2409,8 @@ deposit_html = """
 </html>
 """                              
 
+
+
 cashbook_html = """
 <!DOCTYPE html>
 <html lang="en">
@@ -2650,53 +2660,25 @@ base_html = """
             margin-bottom: 25px;
             position: relative;
         }
-
+        
         .logo {
             width: 120px;
             height: 120px;
-            background: var(--gold-gradient);
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
             margin: 0 auto 15px;
-            box-shadow: var(--shadow);
-            border: 4px solid var(--gold-dark);
-            position: relative;
-            overflow: hidden;
-        }
-
-        .logo::after {
-            content: '';
-            position: absolute;
-            top: -10px;
-            left: -10px;
-            right: -10px;
-            bottom: -10px;
-            background: var(--gold-gradient);
-            border-radius: 50%;
-            z-index: -1;
-            opacity: 0.5;
-            filter: blur(15px);
-        }
+        }        
 
         .logo-text {
             font-size: 2rem;
             font-weight: 800;
             color: var(--dark-bg);
             text-shadow: 1px 1px 2px rgba(0,0,0,0.2);
-        }
+}
 
-        h1 {
-            font-size: 2.8rem;
-            margin-bottom: 20px;
-            background: var(--gold-gradient);
-            -webkit-background-clip: text;
-            background-clip: text;
-            color: transparent;
-            text-shadow: 0 0 20px rgba(212, 175, 55, 0.3);
-            font-weight: 800;
-            letter-spacing: 1px;
+        .logo-img {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;   /* keeps natural proportions */
+            border-radius: 50%;    /* optional: matches your round logo frame */
         }
 
         .tagline {
@@ -3122,37 +3104,10 @@ base_html = """
 </head>
 <body>
     <button id="install-btn">📱 Install App</button>
-    <style>
-        /* ✅ Added minimal, isolated styling — affects only the logo */
-        .harambee-logo {
-            width: 120px;
-            height: auto;
-            display: block;
-            margin: 0 auto 10px auto;
-            object-fit: contain;
-            border-radius: 12px; /* optional for smooth edges */
-            box-shadow: 0 0 12px rgba(0, 0, 0, 0.15);
-            background: transparent; /* ensures original logo colors show untouched */
-        }
 
-        .logo-container {
-            text-align: center;
-            margin-top: 20px;
-        }
-    </style>    
-
-    <div class="container">
-        <div class="logo-container">
-            <div class="logo">
-                <!-- ✅ Added logo image, preserves all original colors and layout -->
-                <img src="{{ url_for('static', filename='piclog.png') }}" 
-                     alt="Harambee Cash Logo" 
-                     class="harambee-logo">
-            </div>
-                 
-            <h1>HARAMBEE CASH</h1>
-            <p class="tagline">Play & Win Big with Golden Opportunities!</p>
-        </div>
+    <div class="logo">
+        <img src="{{ url_for('static', filename='piclog.png') }}" alt="Harambee Cash Logo" class="logo-img">
+    </div>
 
         <p id="timestamp-display">Loading time...</p>
 
@@ -3218,16 +3173,15 @@ base_html = """
                 <span id="statusText"></span>
             </div>
 
-            <!-- Protected Play Form -->
-            <form method="POST" action="/play" id="playForm">  
+            <!-- Protected Form -->
+            <form method="POST" action="/play" id="playForm" onsubmit="return handlePlayClick(event)">  
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />  
-                <button type="submit" id="playButton" class="cta-button">
+                <button type="submit" id="playButton" class="cta-button" onclick="return handlePlayClick(event)">
                     🎮 PLAY NOW & WIN BIG!
                 </button>  
             </form>
             
             {% if session.get('user_id') %}
-                <!-- ADD THESE BUTTONS AFTER THE PLAY BUTTON -->
                 <div style="margin: 15px 0; display: flex; gap: 10px; justify-content: center; flex-wrap: wrap;">
                     <a href="/deposit" style="text-decoration: none;">
                         <button class="cta-button" style="background: var(--success); margin: 5px;">
@@ -3393,6 +3347,16 @@ base_html = """
                         }
                     }, true);
                 }
+            }
+
+            setupBeforeUnload() {
+                window.addEventListener('beforeunload', (e) => {
+                    if (this.isSubmitting) {
+                        e.preventDefault();
+                        e.returnValue = 'Your game enrollment is being processed. Are you sure you want to leave?';
+                        return e.returnValue;
+                    }
+                });
             }
 
             handleFormSubmission() {
@@ -3944,9 +3908,17 @@ base_html = """
         }
 
         function handlePlayClick(event) {
-            if (submissionProtector.isSubmitting || submissionProtector.userEnrolled) {
+            if (window.submissionProtector &&         (submissionProtector.isSubmitting || submissionProtector.userEnrolled)) {
                 event.preventDefault();
                 event.stopImmediatePropagation();
+        
+                // Show immediate feedback
+                if (submissionProtector.isSubmitting) {
+                    submissionProtector.showTemporaryMessage('⏳ Processing your previous request...', 'warning');
+                } else if (submissionProtector.userEnrolled) {
+                    submissionProtector.showTemporaryMessage('✅ Already enrolled in current game!', 'message');
+                }
+        
                 return false;
             }
             return true;
@@ -4045,9 +4017,7 @@ base_html = """
                         });
 
                         if (data.current_user_queued) {
-                            submissionProtector.handleSubmissionSuccess('✅ Already  enrolled in current game');
-                        } else {
-    submissionProtector.resetState();
+                            submissionProtector.handleSubmissionSuccess('✅ Already enrolled in current game');
                         }
                     })
                     .catch(error => {
