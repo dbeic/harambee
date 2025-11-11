@@ -266,6 +266,29 @@ def init_db():
 
 init_db()
 
+def login_required(role=None):
+    def decorator(f):
+        @wraps(f)
+        def decorated_function(*args, **kwargs):
+            if 'user_id' not in session:
+                flash("Please log in to access this page.", "error")
+                return redirect(url_for('login'))
+            
+            if role is not None:
+                user_role = session.get('user_role', 'user')
+                
+                # Define role hierarchy (admin > moderator > user)
+                role_hierarchy = {'user': 0, 'moderator': 1, 'admin': 2}
+                required_level = role_hierarchy.get(role, 0)
+                user_level = role_hierarchy.get(user_role, 0)
+                
+                if user_level < required_level:
+                    flash(f"Access denied. {role.title()} role required.", "error")
+                    return redirect(url_for('index'))
+            
+            return f(*args, **kwargs)
+        return decorated_function
+    return decorator
 
 # --- Wallet & transactions ---
 def validate_wallet_sufficient(user_id, amount):
@@ -375,6 +398,7 @@ def static_files(filename):
 
 #Routes
 @app.route("/")
+@limiter.limit("5 per hour")
 def index():
     if 'user_id' in session:
         wallet_balance = get_wallet_balance(session['user_id'])
@@ -409,7 +433,7 @@ def admin_login():
     return render_template_string(admin_login_html, error=None)                
                 
 @app.route("/login", methods=["GET", "POST"])
-@limiter.limit("5 per minute")
+@limiter.limit("2 per minute")
 def login():
     if session.get('user_id'):
         return redirect(url_for('index'))
@@ -438,7 +462,7 @@ def login():
     return render_template_string(login_html, error=None, message=None)
 
 @app.route("/register", methods=["GET", "POST"])
-@limiter.limit("5 per minute")
+@limiter.limit("2 per minute")
 def register():
     if request.method == "POST":
         email = request.form.get("email")
@@ -506,19 +530,24 @@ def sw():
     return send_from_directory('static', 'service-worker.js')
     
 @app.route("/privacy")
+@limiter.limit("2 per hour")
 def privacy():
     return render_template_string(PRIVACY_CONTENT)
 
 @app.route("/terms")
+@limiter.limit("2 per hour")
 def terms():
     return render_template_string(TERMS_CONTENT)
 
 @app.route("/docs")
+@limiter.limit("2  per hour")
 def docs():
     return render_template_string(DOCS_CONTENT)
     
 
 @app.route("/logout")
+@login_required()
+@limiter.limit("3 per hour")
 def logout():
     session.pop('user_id', None)
     session.pop('username', None)
@@ -570,6 +599,7 @@ def stream():
 
 
 @app.route("/game_data")
+@login_required()
 def game_data():
     try:
         with get_db_connection() as conn:
@@ -656,8 +686,8 @@ def game_data():
         }), 500
 
 @app.route("/play", methods=["POST"])
+@login_required()
 @limiter.limit("3 per minute")
-@csrf.protect
 def play():
     user_id = session.get("user_id")
     if not user_id:
@@ -707,6 +737,8 @@ def play():
         return redirect(url_for("index", error="An unexpected error occurred. Please try again."))
 
 @app.route("/admin/add_allowed_user", methods=["POST"])
+@login_required(role='admin')
+@limiter.limit("50 per hour")
 def admin_add_allowed_user():
     if not session.get("is_admin"):
         return redirect(url_for("admin_login", error="Unauthorized access."))
@@ -730,6 +762,8 @@ def admin_add_allowed_user():
             return redirect(url_for("admin_dashboard", error="Failed to add allowed username."))
 
 @app.route("/admin/dashboard")
+@login_required(role='admin')
+@limiter.limit("5 per hour")
 def admin_dashboard():
     if not session.get("is_admin"):
         return redirect(url_for("admin_login", error="Please log in as an admin."))
@@ -751,6 +785,8 @@ def admin_dashboard():
     )  
         
 @app.route("/admin/visitor_log")
+@login_required(role='admin')
+@limiter.limit("5 per hour")
 def view_visits():
     if not session.get("is_admin"):
         return redirect(url_for("admin_login", error="Unauthorized access."))
@@ -784,6 +820,8 @@ def view_visits():
     """, logs=logs)
 
 @app.route("/admin/logout")
+@login_required(role='admin')
+@limiter.limit("3 per hour")
 def admin_logout():
     session.clear()
     return redirect(url_for("admin_login"))
@@ -798,6 +836,8 @@ def robots_txt():
 
 #OLD CODE
 @app.route("/admin/update_wallet", methods=["POST"])
+@login_required(role='admin')
+@limiter.limit("50 per hour")
 def admin_update_wallet():
     if not session.get("is_admin"):
         return redirect(url_for("admin_login", error="Unauthorized access."))
@@ -837,6 +877,8 @@ def admin_update_wallet():
         
 ###########
 @app.route("/cashbook")
+@login_required(role='admin')
+@limiter.limit("5 per hour")
 def cashbook():
     if not session.get("is_admin"):
         return redirect(url_for("admin_login", error="Unauthorized access."))
@@ -912,6 +954,7 @@ def cashbook():
 ###############
         
 @app.route("/withdraw", methods=["GET", "POST"])
+@login_required()
 @limiter.limit("3 per hour")
 def withdraw_request():
     if not session.get('user_id'):
@@ -1116,6 +1159,8 @@ def withdrawal_receipt(receipt_code):
     return render_template_string(withdrawal_receipt_html, withdrawal=withdrawal)
     
 @app.route("/admin/withdrawals")
+@login_required(role='admin')
+@limiter.limit("50 per hour")
 def admin_withdrawals():
     if not session.get("is_admin"):
         return redirect(url_for("admin_login", error="Unauthorized access."))
@@ -1140,6 +1185,8 @@ def admin_withdrawals():
         pending_count=pending_count)
 
 @app.route("/admin/process_withdrawal", methods=["POST"])
+@login_required(role='admin')
+@limiter.limit("50 per hour")
 def process_withdrawal():
     if not session.get("is_admin"):
         return jsonify({"error": "Unauthorized"}), 403
@@ -1224,6 +1271,7 @@ def process_withdrawal():
         return jsonify({"error": "System error"}), 500
         
 @app.route("/deposit", methods=["GET", "POST"])
+@login_required()
 @limiter.limit("5 per hour")
 def deposit_request():
     if not session.get('user_id'):
@@ -1297,6 +1345,8 @@ def deposit_voucher(voucher_code):
     return render_template_string(deposit_voucher_html, deposit=deposit)
 
 @app.route("/admin/process_deposit", methods=["POST"])
+@login_required(role='admin')
+@limiter.limit("50 per hour")
 def process_deposit():
     if not session.get("is_admin"):
         return jsonify({"error": "Unauthorized"}), 403
