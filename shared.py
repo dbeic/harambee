@@ -64,6 +64,7 @@ def get_timestamp():
 def notify_clients(event_type, data):
     """Placeholder for client notifications"""
     logging.info(f"Game Event: {event_type} - {data}")
+      
     
 def check_pool_health():
     """Check if connection pool is healthy"""
@@ -76,4 +77,4 @@ def check_pool_health():
             return True
     except Exception as e:
         logging.error(f"Database pool health check failed: {e}")
-        return False    
+        return False
