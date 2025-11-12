@@ -2628,8 +2628,7 @@ base_html = """
 <!DOCTYPE html>
 <html lang="en">  
 <head>
-    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-5190046541953794"
-     crossorigin="anonymous"></script>
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-5190046541953794" crossorigin="anonymous"></script>
     <meta charset="UTF-8" />  
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />  
     <title>HARAMBEE CASH - Play & Win Big!</title>  
@@ -2637,6 +2636,8 @@ base_html = """
     <meta name="theme-color" content="#D4AF37" />  
     <link rel="icon" type="image/png" href="{{ url_for('static', filename='favicon.ico') }}" />  
     <link rel="apple-touch-icon" href="{{ url_for('static', filename='apple-touch-icon.png') }}" />  
+    <meta name="description" content="Harambee Cash - Play exciting games and win big prizes. Join our community gaming platform today!" />
+    <meta name="keywords" content="gaming, cash prizes, harambee, win money, online games" />
     <style>  
         :root {
             --gold-primary: #D4AF37;
@@ -2656,7 +2657,9 @@ base_html = """
             --shadow-hover: 0 15px 40px rgba(212, 175, 55, 0.25);
             --radius: 20px;
             --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            --success: #10B981;
+            --success: #00C9B1;
+            --error: #FF6B35;
+            --warning: #FFD166;
         }
 
         * {
@@ -2710,53 +2713,26 @@ base_html = """
             margin-bottom: 25px;
             position: relative;
         }
-
+        
         .logo {
-            width: 120px;
-            height: 120px;
-            background: var(--gold-gradient);
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
+            width: 150px;
+            height: 150px;
             margin: 0 auto 15px;
-            box-shadow: var(--shadow);
-            border: 4px solid var(--gold-dark);
-            position: relative;
-            overflow: hidden;
-        }
-
-        .logo::after {
-            content: '';
-            position: absolute;
-            top: -10px;
-            left: -10px;
-            right: -10px;
-            bottom: -10px;
-            background: var(--gold-gradient);
-            border-radius: 50%;
-            z-index: -1;
-            opacity: 0.5;
-            filter: blur(15px);
-        }
+        }        
 
         .logo-text {
             font-size: 2rem;
             font-weight: 800;
             color: var(--dark-bg);
             text-shadow: 1px 1px 2px rgba(0,0,0,0.2);
-        }
+}
 
-        h1 {
-            font-size: 2.8rem;
-            margin-bottom: 20px;
-            background: var(--gold-gradient);
-            -webkit-background-clip: text;
-            background-clip: text;
-            color: transparent;
-            text-shadow: 0 0 20px rgba(212, 175, 55, 0.3);
-            font-weight: 800;
-            letter-spacing: 1px;
+        .logo-img {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+            border-radius: 50%;
+            filter: none !important;
         }
 
         .tagline {
@@ -2848,6 +2824,12 @@ base_html = """
             background: var(--gold-gradient-reverse);
         }
 
+        .cta-button:disabled {
+            opacity: 0.7;
+            cursor: not-allowed;
+            transform: none;
+        }
+
         .features-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
@@ -2907,35 +2889,184 @@ base_html = """
             text-shadow: 0 0 10px rgba(255, 215, 0, 0.5);
         }
 
-        /* Message Styles */
+        /* Error and Message Styles */
         .error {
-            background: #FEE2E2;
-            color: #DC2626;
+            background: rgba(255, 107, 53, 0.1);
+            border: 1px solid var(--error);
+            color: var(--error);
             padding: 15px;
             border-radius: var(--radius);
             margin: 15px 0;
-            border: 1px solid #FECACA;
         }
 
         .message {
-            background: #DCFCE7;
-            color: #16A34A;
+            background: rgba(0, 201, 177, 0.1);
+            border: 1px solid var(--success);
+            color: var(--success);
             padding: 15px;
             border-radius: var(--radius);
             margin: 15px 0;
-            border: 1px solid #BBF7D0;
         }
 
         .warning {
-            background: #FEF3C7;
-            color: #D97706;
+            background: rgba(255, 209, 102, 0.1);
+            border: 1px solid var(--warning);
+            color: var(--warning);
             padding: 15px;
             border-radius: var(--radius);
             margin: 15px 0;
-            border: 1px solid #FDE68A;
         }
 
-        /* Social Icons */
+        /* Game Results Styles */
+        .game-window {
+            margin: 30px 0;
+            padding: 25px;
+            background: var(--gold-gradient-subtle);
+            border-radius: var(--radius);
+            border: 1px solid rgba(212, 175, 55, 0.2);
+        }
+
+        .game-result {
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: var(--radius);
+            padding: 15px;
+            margin: 15px 0;
+            border-left: 4px solid var(--gold-primary);
+        }
+
+        /* Enrollment Status */
+        .enrollment-status {
+            background: rgba(0, 201, 177, 0.1);
+            border: 1px solid var(--success);
+            color: var(--success);
+            padding: 15px;
+            border-radius: var(--radius);
+            margin: 15px 0;
+            animation: pulse 2s infinite;
+        }
+
+        /* Loading Spinner */
+        .loading-spinner {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            border-top-color: var(--gold-primary);
+            animation: spin 1s ease-in-out infinite;
+            margin-right: 10px;
+        }
+
+        /* Offline Styles */
+        .offline-banner {
+            background: rgba(255, 107, 53, 0.1);
+            border: 1px solid var(--error);
+            color: var(--error);
+            padding: 20px;
+            border-radius: var(--radius);
+            margin: 20px 0;
+        }
+
+        .offline-btn {
+            background: var(--gold-gradient-subtle);
+            border: 1px solid rgba(212, 175, 55, 0.3);
+            color: var(--text-gold);
+            padding: 12px 20px;
+            border-radius: var(--radius);
+            margin: 10px;
+            cursor: pointer;
+            transition: var(--transition);
+        }
+
+        .offline-btn:hover {
+            background: var(--gold-gradient);
+            color: var(--dark-bg);
+        }
+
+        /* Trivia Styles */
+        .trivia-option {
+            background: var(--gold-gradient-subtle);
+            border: 1px solid rgba(212, 175, 55, 0.3);
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: var(--radius);
+            cursor: pointer;
+            transition: var(--transition);
+        }
+
+        .trivia-option:hover {
+            background: rgba(212, 175, 55, 0.2);
+        }
+
+        .trivia-correct {
+            background: rgba(0, 201, 177, 0.2);
+            border-color: var(--success);
+        }
+
+        .trivia-wrong {
+            background: rgba(255, 107, 53, 0.2);
+            border-color: var(--error);
+        }
+
+        /* Achievement Notification */
+        .achievement-notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: var(--gold-gradient);
+            color: var(--dark-bg);
+            padding: 20px;
+            border-radius: var(--radius);
+            box-shadow: var(--shadow-hover);
+            z-index: 1000;
+            animation: slideInRight 0.5s ease-out;
+        }
+
+        /* Game Animation */
+        .game-animation {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 999;
+            flex-direction: column;
+        }
+
+        .animation-content {
+            text-align: center;
+            color: white;
+        }
+
+        .animated-image {
+            font-size: 8rem;
+            margin-bottom: 20px;
+            animation: bounce 1s infinite;
+        }
+
+        .animation-text {
+            font-size: 2rem;
+            font-weight: bold;
+            text-shadow: 0 0 10px rgba(255, 215, 0, 0.8);
+        }
+
+        .rocket, .confetti {
+            position: absolute;
+            font-size: 2rem;
+            animation: floatUp 2s ease-out forwards;
+        }
+
+        .confetti {
+            width: 10px;
+            height: 10px;
+            border-radius: 2px;
+        }
+
+        /* Social Icons - Updated for natural colors */
         .socials {
             display: flex;
             justify-content: center;
@@ -2949,7 +3080,7 @@ base_html = """
             display: flex;
             align-items: center;
             justify-content: center;
-            background: var(--gold-gradient-subtle);
+            background: transparent;
             border-radius: 50%;
             transition: var(--transition);
             border: 1px solid rgba(212, 175, 55, 0.3);
@@ -2957,83 +3088,13 @@ base_html = """
 
         .social-icon:hover {
             transform: translateY(-3px);
-            box-shadow: var(--shadow);
+            background: var(--gold-gradient-subtle);
         }
 
         .social-icon img {
             width: 20px;
             height: 20px;
-            filter: brightness(0) invert(1);
-        }
-
-        /* Enrollment Status */
-        .enrollment-status {
-            background: var(--gold-gradient-subtle);
-            border: 1px solid rgba(212, 175, 55, 0.3);
-            border-radius: var(--radius);
-            padding: 15px;
-            margin: 15px 0;
-            color: var(--text-gold);
-            font-weight: 600;
-        }
-
-        /* Offline Buttons */
-        .offline-btn {
-            background: var(--gold-gradient-subtle);
-            border: 1px solid rgba(212, 175, 55, 0.3);
-            color: var(--text-gold);
-            padding: 12px 20px;
-            border-radius: var(--radius);
-            cursor: pointer;
-            margin: 10px;
-            transition: var(--transition);
-            font-weight: 600;
-        }
-
-        .offline-btn:hover {
-            transform: translateY(-2px);
-            box-shadow: var(--shadow);
-            background: var(--gold-gradient);
-            color: var(--dark-bg);
-        }
-
-        /* Game Animation */
-        .game-animation {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0, 0, 0, 0.8);
-            display: none;
-            align-items: center;
-            justify-content: center;
-            z-index: 1000;
-        }
-
-        .animation-content {
-            text-align: center;
-            background: var(--dark-card);
-            padding: 40px;
-            border-radius: var(--radius);
-            border: 2px solid var(--gold-primary);
-        }
-
-        .animated-image {
-            font-size: 4rem;
-            margin-bottom: 20px;
-            animation: bounce 1s infinite;
-        }
-
-        .animation-text {
-            font-size: 1.5rem;
-            color: var(--text-gold);
-            font-weight: 700;
-        }
-
-        @keyframes bounce {
-            0%, 100% { transform: translateY(0); }
-            50% { transform: translateY(-20px); }
+            filter: none !important;
         }
 
         /* Install Button */
@@ -3045,42 +3106,56 @@ base_html = """
             color: var(--dark-bg);
             border: none;
             padding: 10px 20px;
-            border-radius: 25px;
+            border-radius: 50px;
             cursor: pointer;
-            font-weight: 700;
-            z-index: 100;
             box-shadow: var(--shadow);
-            transition: var(--transition);
+            display: none;
+            z-index: 100;
+            font-weight: 600;
         }
 
-        #install-btn:hover {
-            transform: translateY(-2px);
-            box-shadow: var(--shadow-hover);
+        /* Animations */
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.7; }
+            100% { opacity: 1; }
+        }
+
+        @keyframes slideInRight {
+            from { transform: translateX(100%); }
+            to { transform: translateX(0); }
+        }
+
+        @keyframes bounce {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-20px); }
+        }
+
+        @keyframes floatUp {
+            to {
+                transform: translateY(-100vh) rotate(360deg);
+                opacity: 0;
+            }
         }
 
         @media (max-width: 480px) {
             h1 { font-size: 2.2rem; }
             .container { padding: 25px 15px; margin: 15px; }
-            .logo { width: 100px; height: 100px; }
+            .logo { width: 130px; height: 130px; }
             .logo-text { font-size: 1.6rem; }
             .balance-display { font-size: 1.2rem; min-width: 200px; padding: 15px; }
             .balance-amount { font-size: 1.8rem; }
             .welcome-section h2 { font-size: 1.5rem; }
             .welcome-section h3 { font-size: 1.3rem; }
             .cta-button { padding: 12px 30px; font-size: 1.1rem; }
-            #install-btn {
-                top: 10px;
-                right: 10px;
-                padding: 8px 16px;
-                font-size: 0.9rem;
-            }
+            .animated-image { font-size: 4rem; }
+            .animation-text { font-size: 1.5rem; }
+            #install-btn { top: 10px; right: 10px; padding: 8px 16px; font-size: 0.9rem; }
         }
-    .site-logo {
-        width: 90%;
-        height: 90%;
-        object-fit: cover;
-        border-radius: 50%;
-    }        
     </style>
 </head>
 <body>
