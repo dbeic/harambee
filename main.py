@@ -24,7 +24,6 @@ from werkzeug.security import generate_password_hash, check_password_hash
 from flask import send_from_directory
 from flask_wtf.csrf import CSRFProtect
 from datetime import datetime, timedelta, timezone
-from game_worker import run_game
 
 now = datetime.now()
 now_str = now.strftime("%Y-%m-%d %H:%M:%S")  # convert to string
@@ -268,6 +267,38 @@ def init_db():
 
 init_db()
 
+def test_database_integration():
+    try:
+        with get_db_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("SELECT COUNT(*) FROM users")
+            result = cursor.fetchone()
+            logging.info(f"✅ Database integration test passed: {result[0]} users")
+            return True
+    except Exception as e:
+        logging.error(f"❌ Database integration test failed: {e}")
+        return False
+
+# Call after init_db()
+test_database_integration()
+
+
+def test_game_worker_integration():
+    try:
+        # Test timestamp function compatibility
+        timestamp = get_timestamp()
+        assert isinstance(timestamp, str)
+        assert '.' in timestamp  # Should have microseconds
+        
+        # Test notification function
+        notify_clients("test_event", {"status": "integration_test"})
+        
+        logging.info("✅ Game worker integration test passed")
+        return True
+    except Exception as e:
+        logging.error(f"❌ Game worker integration test failed: {e}")
+        return False
+
 def login_required(role=None):
     def decorator(f):
         @wraps(f)
@@ -338,7 +369,6 @@ def log_transaction(user_id, transaction_type, amount):
         logging.error(f"Error in log_transaction(): {e}")
 
 # --- Logging visitors / activity ---
-# --- Logging visitors / activity ---
 def log_visit_entry(ip_address, user_agent, referrer=None, page=None, timestamp=None):
     # Ensure timestamp is always a string
     if timestamp is None:
@@ -356,6 +386,7 @@ def log_visit_entry(ip_address, user_agent, referrer=None, page=None, timestamp=
             VALUES (%s, %s, %s, %s, %s)
         """, (ip_address, user_agent, referrer, page, ts))
         conn.commit()           
+
 
 @app.before_request
 def log_user_activity():
@@ -377,27 +408,13 @@ def log_user_activity():
             conn.commit()
     except Exception as e:
         logging.debug(f"Failed to log user activity: {e}")
-
-@app.before_request
-def log_visitor():
-    if request.path.startswith("/static"):
-        return
-    try:
-        ip = request.headers.get('X-Forwarded-For', request.remote_addr)
-        agent = request.headers.get('User-Agent', 'unknown')
-        ref = request.referrer or 'direct'
-        path = request.path
-        ts = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        log_visit_entry(ip, agent, ref, path, ts)
-    except Exception as e:
-        logging.debug(f"Visitor log error: {e}")
-
+        
+        
 # --- Static files route (exposed) ---
 @csrf.exempt
 @app.route("/static/<path:filename>")
 def static_files(filename):
     return send_from_directory("static", filename)
-
 
 #Routes
 @app.route("/")
@@ -5023,11 +5040,13 @@ DOCS_CONTENT = """
 </html>
 """
 
-# --- Background game loop start ---
+# main.py
 @app.before_first_request
 def start_background_game_loop():
     thread = threading.Thread(target=run_game, daemon=True)
     thread.start()
+    logging.info("🎮 Game loop started")
+
 
 # --- Run ---
 if __name__ == "__main__":
