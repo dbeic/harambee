@@ -2656,6 +2656,7 @@ base_html = """
             --shadow-hover: 0 15px 40px rgba(212, 175, 55, 0.25);
             --radius: 20px;
             --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            --success: #10B981;
         }
 
         * {
@@ -2906,6 +2907,157 @@ base_html = """
             text-shadow: 0 0 10px rgba(255, 215, 0, 0.5);
         }
 
+        /* Message Styles */
+        .error {
+            background: #FEE2E2;
+            color: #DC2626;
+            padding: 15px;
+            border-radius: var(--radius);
+            margin: 15px 0;
+            border: 1px solid #FECACA;
+        }
+
+        .message {
+            background: #DCFCE7;
+            color: #16A34A;
+            padding: 15px;
+            border-radius: var(--radius);
+            margin: 15px 0;
+            border: 1px solid #BBF7D0;
+        }
+
+        .warning {
+            background: #FEF3C7;
+            color: #D97706;
+            padding: 15px;
+            border-radius: var(--radius);
+            margin: 15px 0;
+            border: 1px solid #FDE68A;
+        }
+
+        /* Social Icons */
+        .socials {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin: 20px 0;
+        }
+
+        .social-icon {
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: var(--gold-gradient-subtle);
+            border-radius: 50%;
+            transition: var(--transition);
+            border: 1px solid rgba(212, 175, 55, 0.3);
+        }
+
+        .social-icon:hover {
+            transform: translateY(-3px);
+            box-shadow: var(--shadow);
+        }
+
+        .social-icon img {
+            width: 20px;
+            height: 20px;
+            filter: brightness(0) invert(1);
+        }
+
+        /* Enrollment Status */
+        .enrollment-status {
+            background: var(--gold-gradient-subtle);
+            border: 1px solid rgba(212, 175, 55, 0.3);
+            border-radius: var(--radius);
+            padding: 15px;
+            margin: 15px 0;
+            color: var(--text-gold);
+            font-weight: 600;
+        }
+
+        /* Offline Buttons */
+        .offline-btn {
+            background: var(--gold-gradient-subtle);
+            border: 1px solid rgba(212, 175, 55, 0.3);
+            color: var(--text-gold);
+            padding: 12px 20px;
+            border-radius: var(--radius);
+            cursor: pointer;
+            margin: 10px;
+            transition: var(--transition);
+            font-weight: 600;
+        }
+
+        .offline-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--shadow);
+            background: var(--gold-gradient);
+            color: var(--dark-bg);
+        }
+
+        /* Game Animation */
+        .game-animation {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+
+        .animation-content {
+            text-align: center;
+            background: var(--dark-card);
+            padding: 40px;
+            border-radius: var(--radius);
+            border: 2px solid var(--gold-primary);
+        }
+
+        .animated-image {
+            font-size: 4rem;
+            margin-bottom: 20px;
+            animation: bounce 1s infinite;
+        }
+
+        .animation-text {
+            font-size: 1.5rem;
+            color: var(--text-gold);
+            font-weight: 700;
+        }
+
+        @keyframes bounce {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-20px); }
+        }
+
+        /* Install Button */
+        #install-btn {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: var(--gold-gradient);
+            color: var(--dark-bg);
+            border: none;
+            padding: 10px 20px;
+            border-radius: 25px;
+            cursor: pointer;
+            font-weight: 700;
+            z-index: 100;
+            box-shadow: var(--shadow);
+            transition: var(--transition);
+        }
+
+        #install-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-hover);
+        }
+
         @media (max-width: 480px) {
             h1 { font-size: 2.2rem; }
             .container { padding: 25px 15px; margin: 15px; }
@@ -2916,6 +3068,12 @@ base_html = """
             .welcome-section h2 { font-size: 1.5rem; }
             .welcome-section h3 { font-size: 1.3rem; }
             .cta-button { padding: 12px 30px; font-size: 1.1rem; }
+            #install-btn {
+                top: 10px;
+                right: 10px;
+                padding: 8px 16px;
+                font-size: 0.9rem;
+            }
         }
     .site-logo {
         width: 90%;
@@ -2930,6 +3088,109 @@ base_html = """
         // Clear previous enrollment/play state on login page load
         sessionStorage.removeItem('harambeeSubmissionState');
     
+        // Handle play button click
+        function handlePlayClick(event) {
+            const button = event.target;
+            const form = document.getElementById('playForm');
+            
+            // Prevent double submission
+            if (button.disabled) {
+                event.preventDefault();
+                return false;
+            }
+            
+            // Disable button to prevent double clicks
+            button.disabled = true;
+            button.innerHTML = '🎮 PROCESSING...';
+            
+            // Show loading animation
+            showGameAnimation('Processing your play...');
+            
+            // Re-enable button after 3 seconds if form doesn't submit
+            setTimeout(() => {
+                button.disabled = false;
+                button.innerHTML = '🎮 PLAY NOW & WIN BIG!';
+            }, 3000);
+            
+            return true;
+        }
+        
+        function showGameAnimation(message) {
+            const animation = document.getElementById('gameAnimation');
+            const text = document.getElementById('animationText');
+            text.textContent = message;
+            animation.style.display = 'flex';
+            
+            // Hide after 2 seconds
+            setTimeout(() => {
+                animation.style.display = 'none';
+            }, 2000);
+        }
+        
+        // Offline entertainment functions
+        function startTriviaGame() {
+            showGameAnimation('Starting Trivia Challenge!');
+            // Add your trivia game logic here
+        }
+        
+        function showGamingTips() {
+            const content = document.getElementById('offlineContent');
+            content.innerHTML = `
+                <div style="text-align: left; color: var(--text-muted); margin: 20px 0;">
+                    <h3 style="color: var(--text-gold);">🎯 Winning Strategies</h3>
+                    <ul style="margin: 15px 0; padding-left: 20px;">
+                        <li>Start with small bets to understand the game</li>
+                        <li>Set a budget and stick to it</li>
+                        <li>Take breaks between games</li>
+                        <li>Watch patterns in previous results</li>
+                        <li>Play responsibly and have fun!</li>
+                    </ul>
+                </div>
+            `;
+        }
+        
+        function showPracticeMode() {
+            showGameAnimation('Entering Practice Mode!');
+            // Add practice mode logic here
+        }
+        
+        function viewAchievements() {
+            showGameAnimation('Loading Achievements!');
+            // Add achievements logic here
+        }
+        
+        // Update timestamp
+        function updateTimestamp() {
+            const now = new Date();
+            const options = { 
+                weekday: 'long', 
+                year: 'numeric', 
+                month: 'long', 
+                day: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit',
+                second: '2-digit'
+            };
+            document.getElementById('timestamp-display').textContent = 
+                'Current Time: ' + now.toLocaleDateString('en-US', options);
+        }
+        
+        // Initialize
+        document.addEventListener('DOMContentLoaded', function() {
+            updateTimestamp();
+            setInterval(updateTimestamp, 1000);
+            
+            // Check online status
+            window.addEventListener('online', function() {
+                document.getElementById('offlineBanner').style.display = 'none';
+                document.getElementById('offlineEntertainment').style.display = 'none';
+            });
+            
+            window.addEventListener('offline', function() {
+                document.getElementById('offlineBanner').style.display = 'block';
+                document.getElementById('offlineEntertainment').style.display = 'block';
+            });
+        });
     </script>
     <button id="install-btn">📱 Install App</button>
     
@@ -3007,7 +3268,7 @@ base_html = """
             </div>
 
             <!-- Protected Form -->
-            <form method="POST" action="/play" id="playForm" onsubmit="return handlePlayClick(event)">  
+            <form method="POST" action="/play" id="playForm">  
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />  
                 <button type="submit" id="playButton" class="cta-button" onclick="return handlePlayClick(event)">
                     🎮 PLAY NOW & WIN BIG!
