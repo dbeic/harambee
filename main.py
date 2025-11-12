@@ -399,7 +399,7 @@ def static_files(filename):
 
 #Routes
 @app.route("/")
-@limiter.limit("5 per hour")
+@limiter.limit("10 per hour")
 def index():
     if 'user_id' in session:
         wallet_balance = get_wallet_balance(session['user_id'])
@@ -434,7 +434,7 @@ def admin_login():
     return render_template_string(admin_login_html, error=None)                
                 
 @app.route("/login", methods=["GET", "POST"])
-@limiter.limit("2 per minute")
+@limiter.limit("5 per minute")
 def login():
     if session.get('user_id'):
         return redirect(url_for('index'))
@@ -531,24 +531,24 @@ def sw():
     return send_from_directory('static', 'service-worker.js')
     
 @app.route("/privacy")
-@limiter.limit("2 per hour")
+@limiter.limit("10 per hour")
 def privacy():
     return render_template_string(PRIVACY_CONTENT)
 
 @app.route("/terms")
-@limiter.limit("2 per hour")
+@limiter.limit("10 per hour")
 def terms():
     return render_template_string(TERMS_CONTENT)
 
 @app.route("/docs")
-@limiter.limit("2  per hour")
+@limiter.limit("10  per hour")
 def docs():
     return render_template_string(DOCS_CONTENT)
     
 
 @app.route("/logout")
 @login_required()
-@limiter.limit("3 per hour")
+@limiter.limit("5 per hour")
 def logout():
     session.pop('user_id', None)
     session.pop('username', None)
@@ -688,7 +688,7 @@ def game_data():
 
 @app.route("/play", methods=["POST"])
 @login_required()
-@limiter.limit("3 per minute")
+@limiter.limit("5per minute")
 def play():
     user_id = session.get("user_id")
     if not user_id:
