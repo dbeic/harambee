@@ -30,20 +30,29 @@ except Exception as e:
     raise
 
 # Get a database connection using context manager
-@contextmanager
+@contextmanager 
 def get_db_connection():
     conn = None
     try:
         if db_pool:
             conn = db_pool.getconn()
+            # Test connection is still valid
+            conn.cursor().execute("SELECT 1")
             yield conn
         else:
             raise Exception("Database pool not initialized")
+    except psycopg2.InterfaceError:
+        # Connection is broken, create new one
+        if conn:
+            conn.close()
+        conn = psycopg2.connect(ADMIN_DATABASE)
+        yield conn
+        conn.close()
     except Exception as e:
         logging.error(f"Error getting database connection: {e}")
         raise
     finally:
-        if conn and db_pool:
+        if conn and db_pool and not conn.closed:
             db_pool.putconn(conn)
 
 # Helper Functions
@@ -55,3 +64,16 @@ def get_timestamp():
 def notify_clients(event_type, data):
     """Placeholder for client notifications"""
     logging.info(f"Game Event: {event_type} - {data}")
+    
+def check_pool_health():
+    """Check if connection pool is healthy"""
+    if not db_pool:
+        return False
+    try:
+        with get_db_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("SELECT 1")
+            return True
+    except Exception as e:
+        logging.error(f"Database pool health check failed: {e}")
+        return False    
