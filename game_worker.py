@@ -31,6 +31,11 @@ def schedule_upcoming_game():
                 "game_code": game_code, 
                 "timestamp": game_time.strftime("%Y-%m-%d %H:%M:%S")
             })
+            
+# In game_worker.py, add fallbacks:
+def notify_clients(event_type, data):
+    # Fallback if not in shared
+    logging.info(f"Game Event: {event_type} - {data}")            
 
 def start_in_progress_game():
     """Move upcoming game to in-progress status when time arrives"""
@@ -275,6 +280,7 @@ def start_game_loop():
     print("Starting game loop thread...")
     game_thread = threading.Thread(target=run_game, daemon=True)
     game_thread.start()
+    
 
 def stop_game_loop():
     """Stop the game processing thread"""
