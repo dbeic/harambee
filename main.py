@@ -102,7 +102,7 @@ def init_db():
         """)
         cursor.execute("""
             CREATE TABLE IF NOT EXISTS visit_logs (
-                id SERIAL PRIMARY KEY,
+                id SERIAL PRIMARY KEY, 
                 ip_address TEXT,
                 user_agent TEXT,
                 referrer TEXT,
@@ -146,6 +146,7 @@ def init_db():
                 type TEXT NOT NULL CHECK(type IN ('deposit', 'withdrawal', 'game_entry', 'win')),
                 amount NUMERIC NOT NULL,
                 timestamp TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                game_code TEXT,
                 FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE
             )
         """)
@@ -337,6 +338,7 @@ def log_transaction(user_id, transaction_type, amount):
         logging.error(f"Error in log_transaction(): {e}")
 
 # --- Logging visitors / activity ---
+# --- Logging visitors / activity ---
 def log_visit_entry(ip_address, user_agent, referrer=None, page=None, timestamp=None):
     # Ensure timestamp is always a string
     if timestamp is None:
@@ -350,10 +352,10 @@ def log_visit_entry(ip_address, user_agent, referrer=None, page=None, timestamp=
     with get_db_connection() as conn:
         cursor = conn.cursor()
         cursor.execute("""
-            INSERT INTO visit_logs (ip_address, user_agent, referrer, page, timestamp)
+            INSERT INTO visit_logs (ip_address, user_agent, referrer, path, timestamp)
             VALUES (%s, %s, %s, %s, %s)
         """, (ip_address, user_agent, referrer, page, ts))
-        conn.commit()
+        conn.commit()           
 
 @app.before_request
 def log_user_activity():
@@ -688,7 +690,7 @@ def game_data():
 
 @app.route("/play", methods=["POST"])
 @login_required()
-@limiter.limit("5per minute")
+@limiter.limit("5 per minute")
 def play():
     user_id = session.get("user_id")
     if not user_id:
@@ -3165,8 +3167,22 @@ base_html = """
     
         // Handle play button click
         function handlePlayClick(event) {
+            if (window.submissionProtector && 
+                (window.submissionProtector.isSubmitting || window.submissionProtector.userEnrolled)) {
+                event.preventDefault();
+                event.stopImmediatePropagation();
+        
+                // Show immediate feedback
+                if (window.submissionProtector.isSubmitting) {
+                    window.submissionProtector.showTemporaryMessage('⏳ Processing your previous request...', 'warning');
+                } else if (window.submissionProtector.userEnrolled) {
+                    window.submissionProtector.showTemporaryMessage('✅ Already enrolled in current game!', 'message');
+                }
+        
+                return false;
+            }
+            
             const button = event.target;
-            const form = document.getElementById('playForm');
             
             // Prevent double submission
             if (button.disabled) {
@@ -3272,7 +3288,7 @@ base_html = """
     <div class="container">               
     <div class="logo-container">
         <div class="logo">
-            <img src="{{ url_for('static', filename='piclog.png') }}" alt="Harambee Cash Logo" class="site-logo">
+            <img src="{{ url_for('static', filename='piclog.png') }}" alt="Harambee Cash Logo" class="logo-image">
         </div>
         <h1>HARAMBEE CASH</h1>
         <p class="tagline">Play & Win Big with Golden Opportunities!</p>
@@ -3456,7 +3472,7 @@ base_html = """
             setupAudioPermission() {
                 document.addEventListener('click', () => {
                     this.audioEnabled = true;
-                }, { once: true });
+                });
             }
 
             loadSubmissionState() {
@@ -3893,7 +3909,7 @@ base_html = """
         }
 
         function playSoundFeedback(isCorrect) {
-            if (!submissionProtector.audioEnabled) return;
+            if (!window.submissionProtector.audioEnabled) return;
             
             try {
                 const context = new (window.AudioContext || window.webkitAudioContext)();
@@ -4074,23 +4090,6 @@ base_html = """
                 offlineBanner.style.display = 'none';
                 offlineEntertainment.style.display = 'none';
             }
-        }
-
-        function handlePlayClick(event) {
-            if (window.submissionProtector &&         (submissionProtector.isSubmitting || submissionProtector.userEnrolled)) {
-                event.preventDefault();
-                event.stopImmediatePropagation();
-        
-                // Show immediate feedback
-                if (submissionProtector.isSubmitting) {
-                    submissionProtector.showTemporaryMessage('⏳ Processing your previous request...', 'warning');
-                } else if (submissionProtector.userEnrolled) {
-                    submissionProtector.showTemporaryMessage('✅ Already enrolled in current game!', 'message');
-                }
-        
-                return false;
-            }
-            return true;
         }
 
         // Initialize everything when DOM is loaded
