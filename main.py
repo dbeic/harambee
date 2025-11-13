@@ -277,9 +277,15 @@ def login_required(role=None):
                 return redirect(url_for('login'))
             
             if role is not None:
-                user_role = session.get('user_role', 'user')
+                # Handle missing user_role in session
+                user_role = session.get('user_role')
+                if not user_role:
+                    # Check if it's an admin session
+                    if session.get('is_admin'):
+                        user_role = 'admin'
+                    else:
+                        user_role = 'user'
                 
-                # Define role hierarchy (admin > moderator > user)
                 role_hierarchy = {'user': 0, 'moderator': 1, 'admin': 2}
                 required_level = role_hierarchy.get(role, 0)
                 user_level = role_hierarchy.get(user_role, 0)
@@ -1422,7 +1428,7 @@ def process_deposit():
     except Exception as e:
         conn.rollback()
         logging.error(f"Process deposit error: {e}")
-        return jsonify({"error": "System error"}), 500        
+        return jsonify({"error": "System error"}), 500       
         
 #NON MONETARY ADMIN FUNCTIONS
 ###################
