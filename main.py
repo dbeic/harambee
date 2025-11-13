@@ -2628,19 +2628,20 @@ cashbook_html = """
 
 base_html = """
 <!DOCTYPE html>
-<html lang="en">  
+<html lang="en">
 <head>
-    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-5190046541953794" crossorigin="anonymous"></script>
-    <meta charset="UTF-8" />  
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />  
-    <title>HARAMBEE CASH - Play & Win Big!</title>  
-    <link rel="manifest" href="{{ url_for('static', filename='manifest.json') }}" />  
-    <meta name="theme-color" content="#D4AF37" />  
-    <link rel="icon" type="image/png" href="{{ url_for('static', filename='favicon.ico') }}" />  
-    <link rel="apple-touch-icon" href="{{ url_for('static', filename='apple-touch-icon.png') }}" />  
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>HARAMBEE CASH - Play & Win Big!</title>
+
+    <link rel="manifest" href="{{ url_for('static', filename='manifest.json') }}" />
+    <link rel="icon" type="image/png" href="{{ url_for('static', filename='favicon.ico') }}" />
+    <link rel="apple-touch-icon" href="{{ url_for('static', filename='apple-touch-icon.png') }}" />
     <meta name="description" content="Harambee Cash - Play exciting games and win big prizes. Join our community gaming platform today!" />
     <meta name="keywords" content="gaming, cash prizes, harambee, win money, online games" />
-    <style>  
+
+    <!-- Core Styles (kept compact and self-contained) -->
+    <style>
         :root {
             --gold-primary: #D4AF37;
             --gold-secondary: #FFD700;
@@ -2649,7 +2650,7 @@ base_html = """
             --gold-accent: #FFC125;
             --gold-gradient: linear-gradient(135deg, #D4AF37 0%, #FFD700 50%, #F7EF8A 100%);
             --gold-gradient-reverse: linear-gradient(135deg, #F7EF8A 0%, #FFD700 50%, #D4AF37 100%);
-            --gold-gradient-subtle: linear-gradient(135deg, rgba(212, 175, 55, 0.1) 0%, rgba(255, 215, 0, 0.1) 100%);
+            --gold-gradient-subtle: linear-gradient(135deg, rgba(212,175,55,0.08) 0%, rgba(255,215,0,0.06) 100%);
             --dark-bg: #1A1A1A;
             --dark-card: #2D2D2D;
             --text-light: #FFFFFF;
@@ -2664,796 +2665,470 @@ base_html = """
             --warning: #FFD166;
         }
 
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        html, body {
+            height: 100%;
         }
 
         body {
             font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
-            margin: 0;
-            padding: 0;
             background: var(--dark-bg);
-            background-attachment: fixed;
+            color: var(--text-light);
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+        }
+
+        /* Header */
+        header {
             display: flex;
             align-items: center;
-            justify-content: center;
-            min-height: 100vh;
-            color: var(--text-light);
-            text-align: center;
-            line-height: 1.6;
-        }
-
-        .container {
-            background: var(--dark-card);
-            backdrop-filter: blur(20px);
-            padding: 40px 30px;
-            border-radius: var(--radius);
-            max-width: 800px;
-            width: 95%;
-            box-shadow: var(--shadow);
-            position: relative;
-            margin: 20px;
-            border: 1px solid rgba(212, 175, 55, 0.2);
-            transition: var(--transition);
-            overflow: hidden;
-        }
-
-        .container::before {
-            content: '';
-            position: absolute;
+            justify-content: space-between;
+            padding: 14px 18px;
+            background: rgba(0,0,0,0.25);
+            border-bottom: 1px solid rgba(255,255,255,0.03);
+            position: sticky;
             top: 0;
-            left: 0;
-            right: 0;
-            height: 4px;
-            background: var(--gold-gradient);
-            z-index: 1;
+            z-index: 50;
         }
 
-        .logo-container {
-            margin-bottom: 25px;
-            position: relative;
+        .site-logo {
+            display: flex;
+            align-items: center;
+            gap: 12px;
         }
-        
-        .logo {
-            width: 150px;
-            height: 150px;
-            margin: 0 auto 15px;
-        }        
 
-        .logo-text {
-            font-size: 2rem;
-            font-weight: 800;
-            color: var(--dark-bg);
-            text-shadow: 1px 1px 2px rgba(0,0,0,0.2);
-}
-
-        .logo-img {
-            width: 100%;
-            height: 100%;
-            object-fit: contain;
-            border-radius: 50%;
+        /* Ensure the logo image keeps original colors and is not affected by global theme */
+        .site-logo img {
+            height: 48px;
+            width: auto;
             filter: none !important;
+            mix-blend-mode: normal !important;
+            image-rendering: auto;
+            border-radius: 6px;
+            background: transparent;
         }
 
-        .tagline {
-            font-size: 1.3rem;
-            margin-bottom: 30px;
+        .site-title {
+            font-size: 1.2rem;
+            font-weight: 800;
+            color: var(--text-light);
+            letter-spacing: 0.6px;
+        }
+
+        .header-actions {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .wallet-badge {
+            background: rgba(255,215,0,0.06);
+            border: 1px solid rgba(212,175,55,0.12);
+            padding: 8px 12px;
+            border-radius: 999px;
             color: var(--text-gold);
-            font-weight: 500;
-            letter-spacing: 0.5px;
+            font-weight: 700;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.95rem;
         }
 
-        .balance-display {
-            background: var(--gold-gradient-subtle);
-            border: 1px solid rgba(212, 175, 55, 0.3);
-            border-radius: var(--radius);
-            padding: 20px;
-            margin: 25px auto;
-            max-width: 300px;
-            box-shadow: var(--shadow);
-            backdrop-filter: blur(10px);
-            transition: var(--transition);
+        nav {
+            display: flex;
+            justify-content: center;
+            gap: 14px;
+            padding: 10px 8px;
+            background: linear-gradient(180deg, rgba(0,0,0,0.06), transparent);
         }
 
-        .balance-display:hover {
-            transform: translateY(-5px);
-            box-shadow: var(--shadow-hover);
-        }
-
-        .balance-label {
-            font-size: 1rem;
+        nav a {
             color: var(--text-muted);
-            margin-bottom: 8px;
-        }
-
-        .balance-amount {
-            font-size: 2.2rem;
-            font-weight: 700;
-            color: var(--gold-secondary);
-            text-shadow: 0 0 10px rgba(255, 215, 0, 0.3);
-        }
-
-        .welcome-section {
-            margin: 30px 0;
-            padding: 25px;
-            background: var(--gold-gradient-subtle);
-            border-radius: var(--radius);
-            border: 1px solid rgba(212, 175, 55, 0.2);
-        }
-
-        .welcome-section h2 {
-            font-size: 1.8rem;
-            margin-bottom: 15px;
-            color: var(--text-gold);
-            font-weight: 700;
-        }
-
-        .welcome-section h3 {
-            font-size: 1.5rem;
-            margin: 20px 0 10px;
-            color: var(--gold-light);
+            text-decoration: none;
+            padding: 8px 10px;
+            border-radius: 8px;
+            transition: var(--transition);
             font-weight: 600;
         }
 
-        .welcome-section p {
-            color: var(--text-muted);
-            margin-bottom: 15px;
-            font-size: 1.1rem;
-            line-height: 1.7;
+        nav a:hover {
+            color: var(--text-light);
+            background: rgba(255,255,255,0.03);
         }
+
+        .container {
+            max-width: 1000px;
+            margin: 20px auto;
+            padding: 20px;
+        }
+
+        .card {
+            background: var(--dark-card);
+            border-radius: var(--radius);
+            padding: 20px;
+            box-shadow: var(--shadow);
+            border: 1px solid rgba(212, 175, 55, 0.06);
+            margin-bottom: 20px;
+        }
+
+        .logo-container { text-align: center; margin-bottom: 10px; }
+        .logo-text { color: var(--text-light); font-weight: 800; font-size: 1.6rem; }
+
+        .tagline { color: var(--text-gold); margin-top: 8px; font-weight: 600; }
+
+        .balance-display {
+            background: linear-gradient(180deg, rgba(255,215,0,0.04), rgba(255,215,0,0.02));
+            border-radius: 14px;
+            padding: 16px;
+            text-align: center;
+            display: inline-block;
+        }
+
+        .balance-label { color: var(--text-muted); font-size: 0.95rem; }
+        .balance-amount { color: var(--gold-secondary); font-weight: 800; font-size: 1.6rem; }
 
         .cta-button {
             background: var(--gold-gradient);
             color: var(--dark-bg);
             border: none;
-            padding: 15px 40px;
-            font-size: 1.2rem;
+            padding: 12px 26px;
+            font-size: 1rem;
             font-weight: 700;
-            border-radius: 50px;
+            border-radius: 999px;
             cursor: pointer;
-            margin: 20px 0;
-            box-shadow: var(--shadow);
             transition: var(--transition);
-            letter-spacing: 0.5px;
-            text-transform: uppercase;
         }
 
-        .cta-button:hover {
-            transform: translateY(-3px);
-            box-shadow: var(--shadow-hover);
-            background: var(--gold-gradient-reverse);
-        }
-
-        .cta-button:disabled {
-            opacity: 0.7;
-            cursor: not-allowed;
-            transform: none;
-        }
+        .cta-button:hover { transform: translateY(-3px); background: var(--gold-gradient-reverse); }
 
         .features-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 20px;
-            margin: 30px 0;
+            gap: 16px;
+            margin-top: 18px;
         }
 
         .feature-card {
-            background: var(--gold-gradient-subtle);
-            border: 1px solid rgba(212, 175, 55, 0.2);
-            border-radius: var(--radius);
-            padding: 20px 15px;
-            transition: var(--transition);
+            background: rgba(255,255,255,0.02);
+            padding: 14px;
+            border-radius: 12px;
+            border: 1px solid rgba(212,175,55,0.04);
         }
 
-        .feature-card:hover {
-            transform: translateY(-5px);
-            box-shadow: var(--shadow);
-            border-color: rgba(212, 175, 55, 0.4);
-        }
-
-        .feature-icon {
-            font-size: 2.5rem;
-            margin-bottom: 15px;
-            color: var(--gold-secondary);
-        }
-
-        .feature-title {
-            font-size: 1.2rem;
-            font-weight: 600;
-            margin-bottom: 10px;
-            color: var(--text-gold);
-        }
-
-        .feature-desc {
-            font-size: 0.9rem;
-            color: var(--text-muted);
-        }
-
-        .footer {
-            margin-top: 30px;
-            padding-top: 20px;
-            border-top: 1px solid rgba(212, 175, 55, 0.2);
-            color: var(--text-muted);
-            font-size: 0.9rem;
-        }
-
-        .gold-text {
-            background: var(--gold-gradient);
-            -webkit-background-clip: text;
-            background-clip: text;
-            color: transparent;
-            font-weight: 700;
-        }
-
-        .glow-effect {
-            text-shadow: 0 0 10px rgba(255, 215, 0, 0.5);
-        }
-
-        /* Error and Message Styles */
-        .error {
-            background: rgba(255, 107, 53, 0.1);
-            border: 1px solid var(--error);
-            color: var(--error);
-            padding: 15px;
-            border-radius: var(--radius);
-            margin: 15px 0;
-        }
-
-        .message {
-            background: rgba(0, 201, 177, 0.1);
-            border: 1px solid var(--success);
-            color: var(--success);
-            padding: 15px;
-            border-radius: var(--radius);
-            margin: 15px 0;
-        }
-
-        .warning {
-            background: rgba(255, 209, 102, 0.1);
-            border: 1px solid var(--warning);
-            color: var(--warning);
-            padding: 15px;
-            border-radius: var(--radius);
-            margin: 15px 0;
-        }
-
-        /* Game Results Styles */
         .game-window {
-            margin: 30px 0;
-            padding: 25px;
-            background: var(--gold-gradient-subtle);
-            border-radius: var(--radius);
-            border: 1px solid rgba(212, 175, 55, 0.2);
-        }
-
-        .game-result {
-            background: rgba(0, 0, 0, 0.3);
-            border-radius: var(--radius);
-            padding: 15px;
-            margin: 15px 0;
-            border-left: 4px solid var(--gold-primary);
-        }
-
-        /* Enrollment Status */
-        .enrollment-status {
-            background: rgba(0, 201, 177, 0.1);
-            border: 1px solid var(--success);
-            color: var(--success);
-            padding: 15px;
-            border-radius: var(--radius);
-            margin: 15px 0;
-            animation: pulse 2s infinite;
-        }
-
-        /* Loading Spinner */
-        .loading-spinner {
-            display: inline-block;
-            width: 20px;
-            height: 20px;
-            border: 3px solid rgba(255, 255, 255, 0.3);
-            border-radius: 50%;
-            border-top-color: var(--gold-primary);
-            animation: spin 1s ease-in-out infinite;
-            margin-right: 10px;
-        }
-
-        /* Offline Styles */
-        .offline-banner {
-            background: rgba(255, 107, 53, 0.1);
-            border: 1px solid var(--error);
-            color: var(--error);
-            padding: 20px;
-            border-radius: var(--radius);
             margin: 20px 0;
+            padding: 18px;
+            border-radius: 14px;
+            background: linear-gradient(180deg, rgba(212,175,55,0.03), rgba(255,215,0,0.02));
+            border: 1px solid rgba(212,175,55,0.06);
+        }
+
+        .game-result { background: rgba(0,0,0,0.25); padding: 12px; border-radius: 12px; margin-bottom: 12px; }
+
+        .offline-banner {
+            background: rgba(255,107,53,0.08);
+            border: 1px solid rgba(255,107,53,0.12);
+            color: var(--error);
+            padding: 14px;
+            border-radius: 12px;
+            margin: 12px 0;
         }
 
         .offline-btn {
-            background: var(--gold-gradient-subtle);
-            border: 1px solid rgba(212, 175, 55, 0.3);
+            background: rgba(255,215,0,0.06);
+            border: 1px solid rgba(212,175,55,0.12);
             color: var(--text-gold);
-            padding: 12px 20px;
-            border-radius: var(--radius);
-            margin: 10px;
+            padding: 10px 14px;
+            border-radius: 12px;
             cursor: pointer;
-            transition: var(--transition);
         }
 
-        .offline-btn:hover {
-            background: var(--gold-gradient);
-            color: var(--dark-bg);
-        }
-
-        /* Trivia Styles */
         .trivia-option {
-            background: var(--gold-gradient-subtle);
-            border: 1px solid rgba(212, 175, 55, 0.3);
-            padding: 15px;
-            margin: 10px 0;
-            border-radius: var(--radius);
+            background: rgba(255,255,255,0.02);
+            border: 1px solid rgba(212,175,55,0.06);
+            padding: 12px;
+            border-radius: 12px;
             cursor: pointer;
-            transition: var(--transition);
+            margin-bottom: 8px;
         }
 
-        .trivia-option:hover {
-            background: rgba(212, 175, 55, 0.2);
-        }
+        .trivia-correct { background: rgba(0,201,177,0.12); border-color: var(--success); }
+        .trivia-wrong { background: rgba(255,107,53,0.12); border-color: var(--error); }
 
-        .trivia-correct {
-            background: rgba(0, 201, 177, 0.2);
-            border-color: var(--success);
-        }
-
-        .trivia-wrong {
-            background: rgba(255, 107, 53, 0.2);
-            border-color: var(--error);
-        }
-
-        /* Achievement Notification */
         .achievement-notification {
             position: fixed;
             top: 20px;
             right: 20px;
             background: var(--gold-gradient);
             color: var(--dark-bg);
-            padding: 20px;
-            border-radius: var(--radius);
+            padding: 16px;
+            border-radius: 16px;
             box-shadow: var(--shadow-hover);
-            z-index: 1000;
-            animation: slideInRight 0.5s ease-out;
+            z-index: 10000;
         }
 
-        /* Game Animation */
+        /* Game animation overlay */
         .game-animation {
             position: fixed;
             top: 0;
             left: 0;
             width: 100%;
             height: 100%;
-            background: rgba(0, 0, 0, 0.8);
+            background: rgba(0,0,0,0.8);
             display: none;
             justify-content: center;
             align-items: center;
-            z-index: 999;
+            z-index: 9999;
             flex-direction: column;
         }
 
-        .animation-content {
-            text-align: center;
-            color: white;
-        }
+        .animation-content { text-align: center; color: white; }
+        .animated-image { font-size: 6rem; margin-bottom: 16px; animation: bounce 1s infinite; }
+        .animation-text { font-size: 1.6rem; font-weight: 700; text-shadow: 0 0 10px rgba(255,215,0,0.8); }
 
-        .animated-image {
-            font-size: 8rem;
-            margin-bottom: 20px;
-            animation: bounce 1s infinite;
-        }
-
-        .animation-text {
-            font-size: 2rem;
-            font-weight: bold;
-            text-shadow: 0 0 10px rgba(255, 215, 0, 0.8);
-        }
-
-        .rocket, .confetti {
-            position: absolute;
-            font-size: 2rem;
-            animation: floatUp 2s ease-out forwards;
-        }
-
-        .confetti {
-            width: 10px;
-            height: 10px;
-            border-radius: 2px;
-        }
-
-        /* Social Icons - Updated for natural colors */
-        .socials {
-            display: flex;
-            justify-content: center;
-            gap: 15px;
-            margin: 20px 0;
-        }
-
-        .social-icon {
-            width: 40px;
-            height: 40px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            background: transparent;
-            border-radius: 50%;
-            transition: var(--transition);
-            border: 1px solid rgba(212, 175, 55, 0.3);
-        }
-
-        .social-icon:hover {
-            transform: translateY(-3px);
-            background: var(--gold-gradient-subtle);
-        }
-
-        .social-icon img {
-            width: 20px;
-            height: 20px;
-            filter: none !important;
-        }
-
-        /* Install Button */
-        #install-btn {
-            position: fixed;
-            top: 20px;
-            right: 20px;
-            background: var(--gold-gradient);
-            color: var(--dark-bg);
-            border: none;
-            padding: 10px 20px;
-            border-radius: 50px;
-            cursor: pointer;
-            box-shadow: var(--shadow);
-            display: none;
-            z-index: 100;
-            font-weight: 600;
-        }
-
-        /* Animations */
-        @keyframes spin {
-            to { transform: rotate(360deg); }
-        }
-
-        @keyframes pulse {
-            0% { opacity: 1; }
-            50% { opacity: 0.7; }
-            100% { opacity: 1; }
-        }
-
-        @keyframes slideInRight {
-            from { transform: translateX(100%); }
-            to { transform: translateX(0); }
-        }
-
-        @keyframes bounce {
-            0%, 100% { transform: translateY(0); }
-            50% { transform: translateY(-20px); }
-        }
+        .rocket, .confetti { position: absolute; font-size: 1.6rem; animation: floatUp 2s ease-out forwards; }
+        .confetti { width: 10px; height: 10px; border-radius: 2px; }
 
         @keyframes floatUp {
-            to {
-                transform: translateY(-100vh) rotate(360deg);
-                opacity: 0;
-            }
+            to { transform: translateY(-100vh) rotate(360deg); opacity: 0; }
+        }
+        @keyframes bounce {
+            0%,100% { transform: translateY(0); } 50% { transform: translateY(-20px); }
         }
 
-        @media (max-width: 480px) {
-            h1 { font-size: 2.2rem; }
-            .container { padding: 25px 15px; margin: 15px; }
-            .logo { width: 130px; height: 130px; }
-            .logo-text { font-size: 1.6rem; }
-            .balance-display { font-size: 1.2rem; min-width: 200px; padding: 15px; }
-            .balance-amount { font-size: 1.8rem; }
-            .welcome-section h2 { font-size: 1.5rem; }
-            .welcome-section h3 { font-size: 1.3rem; }
-            .cta-button { padding: 12px 30px; font-size: 1.1rem; }
-            .animated-image { font-size: 4rem; }
-            .animation-text { font-size: 1.5rem; }
-            #install-btn { top: 10px; right: 10px; padding: 8px 16px; font-size: 0.9rem; }
+        .footer {
+            text-align: center;
+            padding: 20px;
+            color: var(--text-muted);
+            font-size: 0.9rem;
+        }
+
+        /* Responsive tweaks */
+        @media (max-width: 600px) {
+            .site-title { font-size: 1rem; }
+            .site-logo img { height: 40px; }
+            .container { padding: 12px; margin: 12px; }
         }
     </style>
 </head>
 <body>
-    <script>
-        // Clear previous enrollment/play state on login page load
-        sessionStorage.removeItem('harambeeSubmissionState');
-    
-        // Handle play button click
-        function handlePlayClick(event) {
-            if (window.submissionProtector && 
-                (window.submissionProtector.isSubmitting || window.submissionProtector.userEnrolled)) {
-                event.preventDefault();
-                event.stopImmediatePropagation();
-        
-                // Show immediate feedback
-                if (window.submissionProtector.isSubmitting) {
-                    window.submissionProtector.showTemporaryMessage('⏳ Processing your previous request...', 'warning');
-                } else if (window.submissionProtector.userEnrolled) {
-                    window.submissionProtector.showTemporaryMessage('✅ Already enrolled in current game!', 'message');
-                }
-        
-                return false;
-            }
-            
-            const button = event.target;
-            
-            // Prevent double submission
-            if (button.disabled) {
-                event.preventDefault();
-                return false;
-            }
-            
-            // Disable button to prevent double clicks
-            button.disabled = true;
-            button.innerHTML = '🎮 PROCESSING...';
-            
-            // Show loading animation
-            showGameAnimation('Processing your play...');
-            
-            // Re-enable button after 3 seconds if form doesn't submit
-            setTimeout(() => {
-                button.disabled = false;
-                button.innerHTML = '🎮 PLAY NOW & WIN BIG!';
-            }, 3000);
-            
-            return true;
-        }
-        
-        function showGameAnimation(message) {
-            const animation = document.getElementById('gameAnimation');
-            const text = document.getElementById('animationText');
-            text.textContent = message;
-            animation.style.display = 'flex';
-            
-            // Hide after 2 seconds
-            setTimeout(() => {
-                animation.style.display = 'none';
-            }, 2000);
-        }
-        
-        // Offline entertainment functions
-        function startTriviaGame() {
-            showGameAnimation('Starting Trivia Challenge!');
-            // Add your trivia game logic here
-        }
-        
-        function showGamingTips() {
-            const content = document.getElementById('offlineContent');
-            content.innerHTML = `
-                <div style="text-align: left; color: var(--text-muted); margin: 20px 0;">
-                    <h3 style="color: var(--text-gold);">🎯 Winning Strategies</h3>
-                    <ul style="margin: 15px 0; padding-left: 20px;">
-                        <li>Start with small bets to understand the game</li>
-                        <li>Set a budget and stick to it</li>
-                        <li>Take breaks between games</li>
-                        <li>Watch patterns in previous results</li>
-                        <li>Play responsibly and have fun!</li>
-                    </ul>
-                </div>
-            `;
-        }
-        
-        function showPracticeMode() {
-            showGameAnimation('Entering Practice Mode!');
-            // Add practice mode logic here
-        }
-        
-        function viewAchievements() {
-            showGameAnimation('Loading Achievements!');
-            // Add achievements logic here
-        }
-        
-        // Update timestamp
-        function updateTimestamp() {
-            const now = new Date();
-            const options = { 
-                weekday: 'long', 
-                year: 'numeric', 
-                month: 'long', 
-                day: 'numeric',
-                hour: '2-digit',
-                minute: '2-digit',
-                second: '2-digit'
-            };
-            document.getElementById('timestamp-display').textContent = 
-                'Current Time: ' + now.toLocaleDateString('en-US', options);
-        }
-        
-        // Initialize
-        document.addEventListener('DOMContentLoaded', function() {
-            updateTimestamp();
-            setInterval(updateTimestamp, 1000);
-            
-            // Check online status
-            window.addEventListener('online', function() {
-                document.getElementById('offlineBanner').style.display = 'none';
-                document.getElementById('offlineEntertainment').style.display = 'none';
-            });
-            
-            window.addEventListener('offline', function() {
-                document.getElementById('offlineBanner').style.display = 'block';
-                document.getElementById('offlineEntertainment').style.display = 'block';
-            });
-        });
-    </script>
-    <button id="install-btn">📱 Install App</button>
-                
-    <div class="container">               
-        <div class="logo-container">
-            <div class="logo">
-                <img src="{{ url_for('static', filename='piclog.png') }}" alt="Harambee Cash Logo" class="logo-image">
+    <!-- Header (logo kept in true color) -->
+    <header>
+        <div class="site-logo" style="align-items:center;">
+            <img src="{{ url_for('static', filename='piclog.png') }}" alt="Harambee Cash Logo" />
+            <div>
+                <div class="site-title">HARAMBEE CASH</div>
+                <div class="tagline" style="font-size:0.85rem; margin-top:4px;">Play & Win Big with Golden Opportunities!</div>
             </div>
-            <h1>HARAMBEE CASH</h1>
-            <p class="tagline">Play & Win Big with Golden Opportunities!</p>
         </div>
-    </div>
 
-        <p id="timestamp-display">Loading time...</p>
+        <div class="header-actions">
+            {% if session.get('user_id') %}
+                <div class="wallet-badge">Ksh. {{ wallet_balance | default(0.0) | float | round(2) }}</div>
+            {% else %}
+                <a href="{{ url_for('login') }}" class="cta-button" style="padding:8px 12px; font-size:0.95rem;">Login</a>
+            {% endif %}
+        </div>
+    </header>
 
-        {% if error %}<div class="error">{{ error }}</div>{% endif %}  
-        {% if message %}<div class="message">{{ message }}</div>{% endif %}
-        {% if warning %}<div class="warning">{{ warning }}</div>{% endif %}
-
+    <!-- Navigation -->
+    <nav>
+        <a href="{{ url_for('index') }}">🏠 Home</a>
         {% if not session.get('user_id') %}
-            <div class="welcome-section">
-                <h2>Welcome to <span class="gold-text">Harambee Cash</span></h2>
-                <p>Join our exciting gaming platform where you can play and win real prizes!</p>
-                
-                <div style="text-align: center; margin: 25px 0;">
-                    <p style="font-size: 1.2rem; margin-bottom: 20px;"><strong>Ready to play?</strong></p>
-                    <a href="/register" style="display: inline-block; margin: 10px;">
-                        <button class="cta-button">Create Account</button>
-                    </a>
-                    <a href="/login" style="display: inline-block; margin: 10px;">
-                        <button class="cta-button" style="background: var(--gold-gradient-reverse);">Login</button>
-                    </a>
-                </div>
+            <a href="{{ url_for('register') }}">📝 Register</a>
+            <a href="{{ url_for('login') }}">🔑 Login</a>
+        {% else %}
+            <a href="{{ url_for('deposit') }}">💳 Deposit</a>
+            <a href="{{ url_for('withdraw') }}">📤 Withdraw</a>
+            <a href="{{ url_for('index') }}">🎯 Games</a>
+            <a href="{{ url_for('logout') }}">🚪 Logout</a>
+            {% if session.get('is_admin') %}
+                <a href="{{ url_for('admin_dashboard') }}">🛠 Admin</a>
+            {% endif %}
+        {% endif %}
+    </nav>
 
-                <div class="features-grid">
-                    <div class="feature-card">
-                        <div class="feature-icon">💰</div>
-                        <div class="feature-title">Win Real Cash</div>
-                        <div class="feature-desc">Play with just Ksh. 1.00 and win exciting cash prizes</div>
+    <div class="container">
+        <!-- Flash messages (kept to work with Flask's flash) -->
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="card" style="border-left:4px solid rgba(255,255,255,0.04); margin-bottom:12px;">
+                        <div style="color: var(--text-muted);">{{ message }}</div>
                     </div>
-                    <div class="feature-card">
-                        <div class="feature-icon">⚡</div>
-                        <div class="feature-title">Fast Games</div>
-                        <div class="feature-desc">New games every 30 seconds with instant results</div>
-                    </div>
-                    <div class="feature-card">
-                        <div class="feature-icon">🛡️</div>
-                        <div class="feature-title">Secure & Safe</div>
-                        <div class="feature-desc">Advanced security with fair gameplay guaranteed</div>
-                    </div>
-                    <div class="feature-card">
-                        <div class="feature-icon">🏆</div>
-                        <div class="feature-title">Community</div>
-                        <div class="feature-desc">Join thousands of players winning together</div>
-                    </div>
-                </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
 
-                <h3>How to Play</h3>
-                <ul style="text-align: left; display: inline-block; color: var(--text-muted);">
+        {% if error %}<div class="card" style="border-left:4px solid var(--error); color:var(--error);">{{ error }}</div>{% endif %}
+        {% if message %}<div class="card" style="border-left:4px solid var(--success); color:var(--success);">{{ message }}</div>{% endif %}
+        {% if warning %}<div class="card" style="border-left:4px solid var(--warning); color:var(--warning);">{{ warning }}</div>{% endif %}
+
+        <!-- Not logged in -->
+        {% if not session.get('user_id') %}
+        <div class="card" style="text-align:center;">
+            <h2>Welcome to <span style="color:var(--gold-secondary); font-weight:800;">Harambee Cash</span></h2>
+            <p style="color:var(--text-muted); margin-top:8px;">Join our exciting gaming platform where you can play and win real prizes!</p>
+
+            <div style="margin-top:18px;">
+                <a href="{{ url_for('register') }}" style="text-decoration:none; margin-right:8px;">
+                    <button class="cta-button">Create Account</button>
+                </a>
+                <a href="{{ url_for('login') }}" style="text-decoration:none;">
+                    <button class="cta-button" style="background: var(--gold-gradient-reverse);">Login</button>
+                </a>
+            </div>
+
+            <div class="features-grid" style="margin-top:20px;">
+                <div class="feature-card">
+                    <div style="font-size:1.6rem;">💰</div>
+                    <div style="font-weight:700; margin-top:8px; color:var(--text-gold);">Win Real Cash</div>
+                    <div style="color:var(--text-muted); margin-top:6px;">Play with just Ksh. 1.00 and win exciting cash prizes</div>
+                </div>
+                <div class="feature-card">
+                    <div style="font-size:1.6rem;">⚡</div>
+                    <div style="font-weight:700; margin-top:8px; color:var(--text-gold);">Fast Games</div>
+                    <div style="color:var(--text-muted); margin-top:6px;">New games every 30 seconds with instant results</div>
+                </div>
+                <div class="feature-card">
+                    <div style="font-size:1.6rem;">🛡️</div>
+                    <div style="font-weight:700; margin-top:8px; color:var(--text-gold);">Secure & Safe</div>
+                    <div style="color:var(--text-muted); margin-top:6px;">Advanced security with fair gameplay guaranteed</div>
+                </div>
+                <div class="feature-card">
+                    <div style="font-size:1.6rem;">🏆</div>
+                    <div style="font-weight:700; margin-top:8px; color:var(--text-gold);">Community</div>
+                    <div style="color:var(--text-muted); margin-top:6px;">Join thousands of players winning together</div>
+                </div>
+            </div>
+
+            <div style="margin-top:18px; text-align:left; display:inline-block; color:var(--text-muted);">
+                <h3 style="color:var(--text-gold);">How to Play</h3>
+                <ul>
                     <li>Create your free account</li>
                     <li>Login to access games</li>
                     <li>Play with just Ksh. 1.00 per round</li>
                     <li>Win exciting cash prizes</li>
                 </ul>
             </div>
+        </div>
+
         {% else %}
-            <p style="font-size: 1.3rem; color: var(--text-gold); font-weight: 700;">Welcome back, {{ session.get('username') }}! 👋</p>  
+        <!-- Logged-in UI -->
+        <div style="text-align:center; margin-bottom:14px;">
+            <p style="font-size:1.1rem; color:var(--text-gold); font-weight:700;">Welcome back, {{ session.get('username') }}! 👋</p>
+        </div>
+
+        <div style="display:flex; gap:16px; flex-wrap:wrap; justify-content:center; align-items:center; margin-bottom:16px;">
             <div class="balance-display">
                 <div class="balance-label">Your Wallet Balance</div>
                 <div class="balance-amount">Ksh. {{ wallet_balance | default(0.0) | float | round(2) }}</div>
             </div>
 
-            <!-- Enrollment Status Display -->
-            <div id="enrollmentStatus" class="enrollment-status" style="display: none;">
-                <span id="statusText"></span>
+            <div id="enrollmentStatus" class="card" style="display:none; min-width:220px; align-self:center;">
+                <div id="statusText"></div>
             </div>
+        </div>
 
-            <!-- Protected Form -->
-            <form method="POST" action="/play" id="playForm">  
-                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />  
-                <button type="submit" id="playButton" class="cta-button" onclick="return handlePlayClick(event)">
-                    🎮 PLAY NOW & WIN BIG!
-                </button>  
-            </form>
-            
-            {% if session.get('user_id') %}
-                <div style="margin: 15px 0; display: flex; gap: 10px; justify-content: center; flex-wrap: wrap;">
-                    <a href="/deposit" style="text-decoration: none;">
-                        <button class="cta-button" style="background: var(--success); margin: 5px;">
-                            💰 Deposit Funds
-                        </button>
-                    </a>
-                    <a href="/withdraw" style="text-decoration: none;">
-                        <button class="cta-button" style="background: var(--gold-gradient); margin: 5px;">
-                            📤 Withdraw Earnings
-                        </button>
-                    </a>
-                </div>
-            {% endif %}            
+        <!-- Play form -->
+        <form method="POST" action="{{ url_for('play') }}" id="playForm" style="text-align:center; margin-bottom:16px;">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+            <button type="submit" id="playButton" class="cta-button" onclick="return handlePlayClick(event)">🎮 PLAY NOW & WIN BIG!</button>
+        </form>
 
-            <a href="/logout" style="display: inline-block; margin-top: 15px; color: var(--text-gold); text-decoration: none;">Logout</a>  
-            
-            <div class="game-window">  
-                <h2>Game Status</h2>  
-                <p><strong>Next Game:</strong> <span id="next-game">Loading...</span></p>  
-                <h2>Recent Results (Last 50 Games)</h2>  
-                <div id="game-results">Loading recent games...</div>  
-            </div>  
+        <div style="display:flex; gap:12px; justify-content:center; flex-wrap:wrap; margin-bottom:14px;">
+            <a href="{{ url_for('deposit') }}" style="text-decoration:none;">
+                <button class="cta-button" style="background:var(--success);">💰 Deposit Funds</button>
+            </a>
+            <a href="{{ url_for('withdraw') }}" style="text-decoration:none;">
+                <button class="cta-button" style="background:var(--gold-gradient);">📤 Withdraw Earnings</button>
+            </a>
+        </div>
+
+        <a href="{{ url_for('logout') }}" style="display:inline-block; margin-top:6px; color:var(--text-gold); text-decoration:none;">Logout</a>
+
+        <!-- Game status & recent results -->
+        <div class="game-window">
+            <h2>Game Status</h2>
+            <p><strong>Next Game:</strong> <span id="next-game">Loading...</span></p>
+
+            <h2 style="margin-top:18px;">Recent Results (Last 50 Games)</h2>
+            <div id="game-results">
+                Loading recent games...
+            </div>
+        </div>
         {% endif %}
 
-        <!-- Offline Content -->
-        <div id="offlineBanner" class="offline-banner" style="display: none;">
+        <!-- Offline Content (hidden/shown via JS) -->
+        <div id="offlineBanner" class="offline-banner" style="display:none;">
             <h3>📶 You're Offline - But the Fun Continues!</h3>
             <p>Try these activities while you reconnect:</p>
         </div>
-        
-        <div id="offlineEntertainment" style="display: none;">
+
+        <div id="offlineEntertainment" style="display:none;">
             <div class="game-window">
                 <h2>🎮 {% if session.get('user_id') %}Offline Training Zone{% else %}Offline Fun Zone{% endif %}</h2>
-                <div class="offline-options">
-                    <button class="offline-btn" onclick="startTriviaGame()">
-                        🧠 {% if session.get('user_id') %}Harambee Trivia{% else %}Trivia Challenge{% endif %}
-                    </button>
-                    <button class="offline-btn" onclick="showGamingTips()">
-                        📚 {% if session.get('user_id') %}Winning Strategies{% else %}Gaming Tips{% endif %}
-                    </button>
-                    <button class="offline-btn" onclick="showPracticeMode()">
-                        💪 {% if session.get('user_id') %}Practice Games{% else %}Practice Strategies{% endif %}
-                    </button>
+                <div class="offline-options" style="display:flex; gap:10px; flex-wrap:wrap; justify-content:center; margin-top:12px;">
+                    <button class="offline-btn" onclick="startTriviaGame()">🧠 {% if session.get('user_id') %}Harambee Trivia{% else %}Trivia Challenge{% endif %}</button>
+                    <button class="offline-btn" onclick="showGamingTips()">📚 {% if session.get('user_id') %}Winning Strategies{% else %}Gaming Tips{% endif %}</button>
+                    <button class="offline-btn" onclick="showPracticeMode()">💪 {% if session.get('user_id') %}Practice Games{% else %}Practice Strategies{% endif %}</button>
                     {% if session.get('user_id') %}
-                    <button class="offline-btn" onclick="viewAchievements()">
-                        🏆 My Achievements
-                    </button>
+                    <button class="offline-btn" onclick="viewAchievements()">🏆 My Achievements</button>
                     {% endif %}
                 </div>
-                <div id="offlineContent"></div>
+                <div id="offlineContent" style="margin-top:14px;"></div>
             </div>
         </div>
 
-        <div class="footer">
-            <p>
-                <a href="/terms" style="color: var(--text-gold); text-decoration: none;">Terms & Conditions</a> | 
-                <a href="/privacy" style="color: var(--text-gold); text-decoration: none;">Privacy Policy</a> | 
-                <a href="/docs" style="color: var(--text-gold); text-decoration: none;">Documentation</a>
-            </p>
-            <div class="socials">
-                <a href="https://m.facebook.com/jamesboyid.ochuna" target="_blank" title="Facebook" class="social-icon">
-                    <img src="https://upload.wikimedia.org/wikipedia/commons/5/51/Facebook_f_logo_%282019%29.svg" alt="Facebook" />
-                </a>
-                <a href="https://wa.me/254701207062" target="_blank" title="WhatsApp" class="social-icon">
-                    <img src="https://upload.wikimedia.org/wikipedia/commons/6/6b/WhatsApp.svg" alt="WhatsApp" />
-                </a>
-                <a href="tel:+254701207062" title="Call Us" class="social-icon">
-                    <img src="https://upload.wikimedia.org/wikipedia/commons/8/8c/Phone_font_awesome.svg" alt="Phone" />               
-                </a>  
-            </div>
-            <p style="text-align: center; font-size: 0.9rem; margin-top: 30px; color: var(--text-muted);">
-                © 2025 Pigasimu. All rights reserved.
-            </p>
-        </div>  
+        <div style="margin-top:20px;" class="card">
+            <p style="color:var(--text-muted);">Explore our documentation or contact support if you need help.</p>
+        </div>
+
+    </div> <!-- /.container -->
+
+    <!-- Footer -->
+    <div class="footer">
+        <p>
+            <a href="{{ url_for('terms') }}" style="color:var(--text-gold); text-decoration:none;">Terms & Conditions</a> |
+            <a href="{{ url_for('privacy') }}" style="color:var(--text-gold); text-decoration:none;">Privacy Policy</a> |
+            <a href="{{ url_for('docs') }}" style="color:var(--text-gold); text-decoration:none;">Documentation</a>
+        </p>
+
+        <div style="display:flex; justify-content:center; gap:12px; margin-top:12px;">
+            <a href="https://m.facebook.com/jamesboyid.ochuna" target="_blank" title="Facebook" style="display:inline-block;">
+                <img src="https://upload.wikimedia.org/wikipedia/commons/5/51/Facebook_f_logo_%282019%29.svg" alt="Facebook" style="height:28px; width:auto;" />
+            </a>
+            <a href="https://wa.me/254701207062" target="_blank" title="WhatsApp" style="display:inline-block;">
+                <img src="https://upload.wikimedia.org/wikipedia/commons/6/6b/WhatsApp.svg" alt="WhatsApp" style="height:28px; width:auto;" />
+            </a>
+            <a href="tel:+254701207062" title="Call Us" style="display:inline-block;">
+                <img src="https://upload.wikimedia.org/wikipedia/commons/8/8c/Phone_font_awesome.svg" alt="Phone" style="height:28px; width:auto;" />
+            </a>
+        </div>
+
+        <p style="margin-top:16px; color:var(--text-muted);">© 2025 Pigasimu. All rights reserved.</p>
     </div>
 
-    <!-- Game Animation Elements -->
-    <div id="gameAnimation" class="game-animation">
+    <!-- Game Animation Overlay -->
+    <div id="gameAnimation" class="game-animation" aria-hidden="true">
         <div class="animation-content">
             <div class="animated-image" id="animatedImage">🎮</div>
             <div class="animation-text" id="animationText"></div>
         </div>
     </div>
 
-    <script>  
-// Game Submission Protection System
+    <!-- Install button for PWA -->
+    <button id="install-btn" class="cta-button" style="position:fixed; top:20px; right:20px; display:none; z-index:1000;">📱 Install App</button>
+
+    <!-- Inline JavaScript (merged, cleaned, single SubmissionProtector class) -->
+    <script>
+        // Clear any previous submission state when this page loads (fresh)
+        try { sessionStorage.removeItem('harambeeSubmissionState'); } catch (e) {}
+
+        //////////////////////////////
+        // Submission Protection
+        //////////////////////////////
         class SubmissionProtector {
             constructor() {
                 this.isSubmitting = false;
@@ -3473,7 +3148,7 @@ base_html = """
             setupAudioPermission() {
                 document.addEventListener('click', () => {
                     this.audioEnabled = true;
-                });
+                }, { once: false });
             }
 
             loadSubmissionState() {
@@ -3482,8 +3157,8 @@ base_html = """
 
                 try {
                     const state = JSON.parse(savedState);
-                    this.isSubmitting = state.isSubmitting || false;
-                    this.userEnrolled = state.userEnrolled || false;
+                    this.isSubmitting = !!state.isSubmitting;
+                    this.userEnrolled = !!state.userEnrolled;
 
                     if (this.isSubmitting) {
                         this.disablePlayButton('⏳ Processing...');
@@ -3503,12 +3178,7 @@ base_html = """
                     userEnrolled: this.userEnrolled,
                     timestamp: Date.now()
                 };
-
-                try {
-                    sessionStorage.setItem('harambeeSubmissionState', JSON.stringify(state));
-                } catch (e) {
-                    console.error('Error saving submission state:', e);
-                }
+                try { sessionStorage.setItem('harambeeSubmissionState', JSON.stringify(state)); } catch (e) { console.error(e); }
             }
 
             setupFormProtection() {
@@ -3525,6 +3195,7 @@ base_html = """
                     return this.handleFormSubmission();
                 });
 
+                // Defensive click handler
                 button.addEventListener('click', (e) => {
                     if (this.isSubmitting || this.userEnrolled) {
                         e.preventDefault();
@@ -3537,7 +3208,6 @@ base_html = """
             setupBeforeUnload() {
                 window.addEventListener('beforeunload', (e) => {
                     if (!this.isSubmitting) return;
-
                     e.preventDefault();
                     e.returnValue = 'Your game enrollment is being processed. Are you sure you want to leave?';
                     return e.returnValue;
@@ -3555,7 +3225,6 @@ base_html = """
 
                 this.submissionTimeout = setTimeout(() => {
                     if (!this.isSubmitting) return;
-
                     this.isSubmitting = false;
                     this.enablePlayButton();
                     this.saveSubmissionState();
@@ -3564,10 +3233,7 @@ base_html = """
 
                 return true;
             }
-        }
 
-            // Game Submission Protection System
-        class SubmissionProtector {
             handleSubmissionSuccess(message = '✅ Successfully enrolled in the next game!') {
                 clearTimeout(this.submissionTimeout);
                 this.isSubmitting = false;
@@ -3577,9 +3243,7 @@ base_html = """
                 this.disablePlayButton('✅ Already Enrolled');
                 this.saveSubmissionState();
 
-                if (this.audioEnabled) {
-                    this.playSuccessSound();
-                }
+                if (this.audioEnabled) this.playSuccessSound();
 
                 setTimeout(() => {
                     this.userEnrolled = false;
@@ -3601,35 +3265,29 @@ base_html = """
                     const context = new (window.AudioContext || window.webkitAudioContext)();
                     const oscillator = context.createOscillator();
                     const gainNode = context.createGain();
-
                     oscillator.connect(gainNode);
                     gainNode.connect(context.destination);
-
                     oscillator.frequency.value = 800;
                     oscillator.type = 'sine';
-
                     gainNode.gain.setValueAtTime(0.3, context.currentTime);
                     gainNode.gain.exponentialRampToValueAtTime(0.01, context.currentTime + 0.5);
-
                     oscillator.start(context.currentTime);
                     oscillator.stop(context.currentTime + 0.5);
-                } catch {
-                    console.log('Web Audio API not supported');
+                } catch (err) {
+                    console.log('Web Audio API not supported', err);
                 }
             }
 
             disablePlayButton(text = '⏳ Processing...') {
                 const button = document.getElementById('playButton');
                 if (!button) return;
-
                 button.disabled = true;
-                button.innerHTML = `<span class="loading-spinner"></span>${text}`;
+                button.innerHTML = `<span style="display:inline-block; vertical-align:middle; margin-right:8px;">⏳</span>${text}`;
             }
 
             enablePlayButton() {
                 const button = document.getElementById('playButton');
                 if (!button) return;
-
                 button.disabled = false;
                 button.innerHTML = '🎮 PLAY NOW & WIN BIG!';
             }
@@ -3638,7 +3296,6 @@ base_html = """
                 const statusDiv = document.getElementById('enrollmentStatus');
                 const statusText = document.getElementById('statusText');
                 if (!statusDiv || !statusText) return;
-
                 statusText.textContent = message;
                 statusDiv.style.display = 'block';
             }
@@ -3646,25 +3303,21 @@ base_html = """
             hideEnrollmentStatus() {
                 const statusDiv = document.getElementById('enrollmentStatus');
                 if (!statusDiv) return;
-
                 statusDiv.style.display = 'none';
             }
 
             showTemporaryMessage(message, type = 'error') {
                 const container = document.querySelector('.container');
                 if (!container) return;
-
                 const messageDiv = document.createElement('div');
-                messageDiv.className = type;
+                messageDiv.className = 'card';
+                messageDiv.style.borderLeft = (type === 'warning' ? '4px solid var(--warning)' : type === 'success' ? '4px solid var(--success)' : '4px solid var(--error)');
+                messageDiv.style.color = (type === 'warning' ? 'var(--warning)' : type === 'success' ? 'var(--success)' : 'var(--error)');
+                messageDiv.style.marginBottom = '12px';
                 messageDiv.textContent = message;
-                messageDiv.style.margin = '10px 0';
-
                 container.insertBefore(messageDiv, container.firstChild);
-
                 setTimeout(() => {
-                    if (messageDiv.parentNode) {
-                        messageDiv.parentNode.removeChild(messageDiv);
-                    }
+                    if (messageDiv.parentNode) messageDiv.parentNode.removeChild(messageDiv);
                 }, 5000);
             }
 
@@ -3674,14 +3327,13 @@ base_html = """
                 clearTimeout(this.submissionTimeout);
                 this.enablePlayButton();
                 this.hideEnrollmentStatus();
-
-                try {
-                    sessionStorage.removeItem('harambeeSubmissionState');
-                } catch {}
+                try { sessionStorage.removeItem('harambeeSubmissionState'); } catch(e){}
             }
         }
 
-        // Game Animator Class
+        //////////////////////////////
+        // Game Animator
+        //////////////////////////////
         class GameAnimator {
             constructor() {
                 this.animation = document.getElementById('gameAnimation');
@@ -3694,33 +3346,23 @@ base_html = """
             async playGameStart(gameCode) {
                 if (this.animationActive) return;
                 this.animationActive = true;
-
                 this.animatedImage.innerHTML = '🚀';
                 this.animationText.textContent = `GAME ${gameCode} STARTED!`;
-                this.animation.className = 'game-animation game-start';
                 this.animation.style.display = 'flex';
-
                 this.createRocketEffect();
-
                 setTimeout(() => this.hideAnimation(), 3000);
             }
 
             async playGameEnd(gameCode, winner, amount) {
                 if (this.animationActive) return;
                 this.animationActive = true;
-
                 this.animatedImage.innerHTML = '🎉';
-                this.animationText.textContent = `WINNER: ${winner} 🏆 Ksh.${amount}`;
-                this.animation.className = 'game-animation game-end';
+                this.animationText.textContent = `WINNER: ${winner} 🏆 ${amount}`;
                 this.animation.style.display = 'flex';
-
                 this.createConfettiEffect();
-
                 setTimeout(() => {
                     this.hideAnimation();
-                    if (window.submissionProtector) {
-                        window.submissionProtector.resetState();
-                    }
+                    if (window.submissionProtector) window.submissionProtector.resetState();
                 }, 4000);
             }
 
@@ -3730,7 +3372,8 @@ base_html = """
                         const rocket = document.createElement('div');
                         rocket.className = 'rocket';
                         rocket.innerHTML = '🚀';
-                        rocket.style.left = `${20 + i * 30}%`;
+                        rocket.style.left = `${10 + i * 20}%`;
+                        rocket.style.top = '80%';
                         this.animation.appendChild(rocket);
 
                         setTimeout(() => {
@@ -3747,7 +3390,10 @@ base_html = """
                         const confetti = document.createElement('div');
                         confetti.className = 'confetti';
                         confetti.style.left = `${Math.random() * 100}%`;
+                        confetti.style.top = `${Math.random() * 60 + 20}%`;
                         confetti.style.background = colors[Math.floor(Math.random() * colors.length)];
+                        confetti.style.width = '10px';
+                        confetti.style.height = '10px';
                         confetti.style.animationDelay = `${Math.random() * 2}s`;
                         this.animation.appendChild(confetti);
 
@@ -3759,20 +3405,15 @@ base_html = """
             }
 
             hideAnimation() {
-                this.animation.style.display = 'none';
-
+                if (this.animation) this.animation.style.display = 'none';
                 const effects = this.animation.querySelectorAll('.confetti, .rocket');
-                effects.forEach(effect => {
-                    if (effect.parentNode) effect.parentNode.removeChild(effect);
-                });
-
+                effects.forEach(effect => { if (effect.parentNode) effect.parentNode.removeChild(effect); });
                 this.animationActive = false;
             }
 
             monitorGameStatus() {
                 setInterval(() => {
                     if (!navigator.onLine) return;
-
                     fetch('/game_data')
                         .then(response => {
                             if (!response.ok) throw new Error('Network error');
@@ -3782,73 +3423,36 @@ base_html = """
                             const currentGame = data.in_progress_game;
                             if (!currentGame) return;
 
-                            if (
-                                currentGame.status === 'in progress' &&
-                                (!this.lastGameStatus || this.lastGameStatus.status !== 'in progress')
-                            ) {
+                            if (currentGame.status === 'in progress' && (!this.lastGameStatus || this.lastGameStatus.status !== 'in progress')) {
                                 this.playGameStart(currentGame.game_code);
                             }
 
-                            if (
-                                currentGame.status === 'completed' &&
-                                this.lastGameStatus &&
-                                this.lastGameStatus.status === 'in progress'
-                            ) {
+                            if (currentGame.status === 'completed' && this.lastGameStatus && this.lastGameStatus.status === 'in progress') {
                                 this.playGameEnd(currentGame.game_code, currentGame.winner, currentGame.winner_amount);
                             }
 
                             this.lastGameStatus = { ...currentGame };
                         })
-                        .catch(error => console.error('Error monitoring game status:', error));
+                        .catch(err => console.error('Error monitoring game status:', err));
                 }, 2000);
             }
         }
 
-        // Offline Entertainment Features
+        //////////////////////////////
+        // Offline features (trivia, achievements)
+        //////////////////////////////
         const triviaQuestions = [
-            {
-                question: "What is the minimum play amount in Harambee Cash?",
-                options: ["Ksh. 1", "Ksh. 5", "Ksh. 10", "Ksh. 20"],
-                answer: 0
-            },
-            {
-                question: "How often do games run in Harambee Cash?",
-                options: ["Every 5 minutes", "Every 30 seconds", "Every hour", "Once a day"],
-                answer: 1
-            },
-            {
-                question: "What should you do before playing any game?",
-                options: ["Set a budget", "Borrow money", "Play continuously", "Ignore rules"],
-                answer: 0
-            },
-            {
-                question: "Which is a good gaming practice?",
-                options: ["Take regular breaks", "Chase losses", "Play when emotional", "Ignore time"],
-                answer: 0
-            }
+            { question: "What is the minimum play amount in Harambee Cash?", options: ["Ksh. 1","Ksh. 5","Ksh. 10","Ksh. 20"], answer: 0 },
+            { question: "How often do games run in Harambee Cash?", options: ["Every 5 minutes","Every 30 seconds","Every hour","Once a day"], answer: 1 },
+            { question: "What should you do before playing any game?", options: ["Set a budget","Borrow money","Play continuously","Ignore rules"], answer: 0 },
+            { question: "Which is a good gaming practice?", options: ["Take regular breaks","Chase losses","Play when emotional","Ignore time"], answer: 0 }
         ];
 
         const achievements = {
-            'offline_explorer': { 
-                name: 'Offline Explorer', 
-                description: 'Used the app while offline',
-                unlocked: false 
-            },
-            'trivia_master': { 
-                name: 'Trivia Master', 
-                description: 'Got perfect score in trivia',
-                unlocked: false 
-            },
-            'knowledge_seeker': { 
-                name: 'Knowledge Seeker', 
-                description: 'Read all gaming tips',
-                unlocked: false 
-            },
-            'app_installer': {
-                name: 'App Installer',
-                description: 'Installed the PWA app',
-                unlocked: false
-            }
+            'offline_explorer': { name: 'Offline Explorer', description: 'Used the app while offline', unlocked: false },
+            'trivia_master':   { name: 'Trivia Master',   description: 'Got perfect score in trivia', unlocked: false },
+            'knowledge_seeker':{ name: 'Knowledge Seeker',description: 'Read all gaming tips', unlocked: false },
+            'app_installer':   { name: 'App Installer',   description: 'Installed the PWA app', unlocked: false }
         };
 
         let currentTriviaQuestion = 0;
@@ -3861,99 +3465,55 @@ base_html = """
         }
 
         function showTriviaQuestion() {
-            if (currentTriviaQuestion >= triviaQuestions.length) {
-                endTriviaGame();
-                return;
-            }
-
-            const question = triviaQuestions[currentTriviaQuestion];
-            let html = `
-                <h3>🧠 Question ${currentTriviaQuestion + 1}/${triviaQuestions.length}</h3>
-                <p style="font-size: 1.2rem; margin: 20px 0;">${question.question}</p>
-                <div id="triviaOptions">
-            `;
-
-            question.options.forEach((option, index) => {
-                html += `
-                    <div class="trivia-option" onclick="checkTriviaAnswer(${index})">
-                        ${option}
-                    </div>
-                `;
+            if (currentTriviaQuestion >= triviaQuestions.length) { endTriviaGame(); return; }
+            const q = triviaQuestions[currentTriviaQuestion];
+            let html = `<h3>🧠 Question ${currentTriviaQuestion + 1}/${triviaQuestions.length}</h3>
+                        <p style="font-size:1.1rem; margin:12px 0;">${q.question}</p>
+                        <div id="triviaOptions">`;
+            q.options.forEach((opt, idx) => {
+                html += `<div class="trivia-option" onclick="checkTriviaAnswer(${idx})">${opt}</div>`;
             });
-
-            html += `</div><p style="margin-top: 15px;">Score: ${triviaScore}</p>`;
-            document.getElementById('offlineContent').innerHTML = html;
+            html += `</div><p style="margin-top:12px;">Score: ${triviaScore}</p>`;
+            const out = document.getElementById('offlineContent');
+            if (out) out.innerHTML = html;
         }
 
         function checkTriviaAnswer(selectedIndex) {
             const question = triviaQuestions[currentTriviaQuestion];
             const options = document.querySelectorAll('.trivia-option');
-            
             options.forEach((option, index) => {
-                if (index === question.answer) {
-                    option.classList.add('trivia-correct');
-                } else if (index === selectedIndex && index !== question.answer) {
-                    option.classList.add('trivia-wrong');
-                }
+                if (index === question.answer) option.classList.add('trivia-correct');
+                else if (index === selectedIndex && index !== question.answer) option.classList.add('trivia-wrong');
                 option.style.pointerEvents = 'none';
             });
-
-            if (selectedIndex === question.answer) {
-                triviaScore++;
-                playSoundFeedback(true);
-            } else {
-                playSoundFeedback(false);
-            }
-
-            setTimeout(() => {
-                currentTriviaQuestion++;
-                showTriviaQuestion();
-            }, 2000);
+            if (selectedIndex === question.answer) { triviaScore++; playSoundFeedback(true); }
+            else playSoundFeedback(false);
+            setTimeout(() => { currentTriviaQuestion++; showTriviaQuestion(); }, 1200);
         }
 
         function playSoundFeedback(isCorrect) {
-            if (!window.submissionProtector.audioEnabled) return;
-            
             try {
+                if (!window.submissionProtector || !window.submissionProtector.audioEnabled) return;
                 const context = new (window.AudioContext || window.webkitAudioContext)();
-                const oscillator = context.createOscillator();
-                const gainNode = context.createGain();
-                
-                oscillator.connect(gainNode);
-                gainNode.connect(context.destination);
-                
-                oscillator.frequency.value = isCorrect ? 800 : 300;
-                oscillator.type = 'sine';
-                
-                gainNode.gain.setValueAtTime(0.3, context.currentTime);
-                gainNode.gain.exponentialRampToValueAtTime(0.01, context.currentTime + 0.5);
-                
-                oscillator.start(context.currentTime);
-                oscillator.stop(context.currentTime + 0.5);
-            } catch (e) {
-                console.log('Web Audio API not supported');
-            }
+                const osc = context.createOscillator();
+                const gain = context.createGain();
+                osc.connect(gain); gain.connect(context.destination);
+                osc.frequency.value = isCorrect ? 800 : 300;
+                osc.type = 'sine';
+                gain.gain.setValueAtTime(0.3, context.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, context.currentTime + 0.4);
+                osc.start(context.currentTime);
+                osc.stop(context.currentTime + 0.4);
+            } catch (e) { console.log('Audio not supported', e); }
         }
 
         function endTriviaGame() {
-            let message = '';
-            if (triviaScore === triviaQuestions.length) {
-                message = "🎉 Perfect! You're a Harambee Cash expert!";
-                unlockAchievement('trivia_master');
-            } else if (triviaScore >= triviaQuestions.length / 2) {
-                message = "👍 Great job! You know your stuff!";
-            } else {
-                message = "💪 Keep learning! Read the tips to improve!";
-            }
-
-            document.getElementById('offlineContent').innerHTML = `
-                <div style="text-align: center; padding: 30px;">
-                    <h3>🏆 Trivia Complete!</h3>
-                    <p>Final Score: ${triviaScore}/${triviaQuestions.length}</p>
-                    <p>${message}</p>
-                    <button class="offline-btn" onclick="startTriviaGame()">Play Again</button>
-                </div>
-            `;
+            let msg = '';
+            if (triviaScore === triviaQuestions.length) { msg = "🎉 Perfect! You're a Harambee Cash expert!"; unlockAchievement('trivia_master'); }
+            else if (triviaScore >= triviaQuestions.length / 2) msg = "👍 Great job! You know your stuff!";
+            else msg = "💪 Keep learning! Read the tips to improve!";
+            const out = document.getElementById('offlineContent');
+            if (out) out.innerHTML = `<div style="text-align:center; padding:20px;"><h3>🏆 Trivia Complete!</h3><p>Final Score: ${triviaScore}/${triviaQuestions.length}</p><p>${msg}</p><button class="offline-btn" onclick="startTriviaGame()">Play Again</button></div>`;
         }
 
         function showGamingTips() {
@@ -3967,199 +3527,185 @@ base_html = """
                 "🔄 Try different strategies in practice mode first",
                 "📱 Install the app for better experience and notifications"
             ];
-
-            let html = '<h3>📚 Smart Gaming Tips</h3><ul style="text-align: left; margin: 20px;">';
-            tips.forEach(tip => {
-                html += `<li style="margin: 10px 0; padding: 10px; background: rgba(0,201,177,0.1); border-radius: 8px;">${tip}</li>`;
-            });
-            html += '</ul><button class="offline-btn" onclick="showPracticeMode()">Next: Practice Strategies</button>';
-
-            document.getElementById('offlineContent').innerHTML = html;
-            unlockAchievement('knowledge_seeker');
+            let html = '<h3>📚 Smart Gaming Tips</h3><ul style="text-align:left; margin-top:10px;">';
+            tips.forEach(t => { html += `<li style="margin:8px 0; padding:8px; background:rgba(0,201,177,0.06); border-radius:8px;">${t}</li>`; });
+            html += '</ul><div style="text-align:center; margin-top:12px;"><button class="offline-btn" onclick="showPracticeMode()">Next: Practice Strategies</button></div>';
+            const out = document.getElementById('offlineContent'); if (out) out.innerHTML = html; unlockAchievement('knowledge_seeker');
         }
 
         function showPracticeMode() {
-            document.getElementById('offlineContent').innerHTML = `
-                <div style="text-align: center;">
-                    <h3>💪 Practice Strategies</h3>
-                    <p>Think through these scenarios to improve your gameplay:</p>
-                    
-                    <div style="text-align: left; margin: 20px 0;">
-                        <div class="game-result">
-                            <h4>Scenario 1: Winning Streak</h4>
-                            <p>You've won 3 games in a row. What should you do?</p>
-                            <p><em>Answer: Consider taking a break or setting aside some winnings.</em></p>
-                        </div>
-                        
-                        <div class="game-result">
-                            <h4>Scenario 2: Losing Streak</h4>
-                            <p>You've lost 5 consecutive games. Your next move?</p>
-                            <p><em>Answer: Take a break, don't chase losses. Come back fresh later.</em></p>
-                        </div>
-                        
-                        <div class="game-result">
-                            <h4>Scenario 3: Budget Management</h4>
-                            <p>You've reached your daily budget limit but want to play more.</p>
-                            <p><em>Answer: Stop playing. Stick to your budget always.</em></p>
-                        </div>
-                    </div>
-                    
-                    <button class="offline-btn" onclick="startTriviaGame()">Test Your Knowledge</button>
+            const html = `<div style="text-align:center;">
+                <h3>💪 Practice Strategies</h3>
+                <div style="text-align:left; margin-top:12px;">
+                    <div class="game-result"><h4>Scenario 1: Winning Streak</h4><p>You've won 3 games in a row. What should you do?</p><p><em>Answer: Consider taking a break or setting aside some winnings.</em></p></div>
+                    <div class="game-result"><h4>Scenario 2: Losing Streak</h4><p>You've lost 5 consecutive games. Your next move?</p><p><em>Answer: Take a break, don't chase losses. Come back fresh later.</em></p></div>
+                    <div class="game-result"><h4>Scenario 3: Budget Management</h4><p>You've reached your daily budget limit but want to play more.</p><p><em>Answer: Stop playing. Stick to your budget always.</em></p></div>
                 </div>
-            `;
+                <div style="margin-top:12px;"><button class="offline-btn" onclick="startTriviaGame()">Test Your Knowledge</button></div>
+            </div>`;
+            const out = document.getElementById('offlineContent'); if (out) out.innerHTML = html;
         }
 
-        function unlockAchievement(achievementId) {
-            if (achievements[achievementId] && !achievements[achievementId].unlocked) {
-                achievements[achievementId].unlocked = true;
-                showAchievementNotification(achievements[achievementId].name);
-                saveAchievements();
+        function unlockAchievement(id) {
+            if (achievements[id] && !achievements[id].unlocked) {
+                achievements[id].unlocked = true;
+                showAchievementNotification(achievements[id].name);
+                try { localStorage.setItem('harambeeAchievements', JSON.stringify(achievements)); } catch(e){}
             }
         }
 
-        function showAchievementNotification(achievementName) {
-            const notification = document.createElement('div');
-            notification.className = 'achievement-notification';
-            notification.innerHTML = `
-                <div style="text-align: center;">
-                    <div style="font-size: 2rem;">🏆</div>
-                    <h4 style="margin: 10px 0;">Achievement Unlocked!</h4>
-                    <p style="margin: 0;">${achievementName}</p>
-                </div>
-            `;
-            
-            document.body.appendChild(notification);
-            
-            setTimeout(() => {
-                notification.style.animation = 'slideInRight 0.5s ease-out reverse';
-                setTimeout(() => {
-                    if (notification.parentNode) {
-                        notification.parentNode.removeChild(notification);
-                    }
-                }, 500);
-            }, 3000);
+        function showAchievementNotification(name) {
+            const n = document.createElement('div');
+            n.className = 'achievement-notification';
+            n.innerHTML = `<div style="text-align:center;"><div style="font-size:1.4rem;">🏆</div><h4 style="margin:6px 0;">Achievement Unlocked!</h4><div>${name}</div></div>`;
+            document.body.appendChild(n);
+            setTimeout(() => { n.style.opacity = '0'; setTimeout(()=>{ if (n.parentNode) n.parentNode.removeChild(n); }, 500); }, 3000);
         }
 
         function viewAchievements() {
-            let html = '<h3>🏆 My Achievements</h3><div style="text-align: left;">';
-            
-            Object.keys(achievements).forEach(achievementId => {
-                const achievement = achievements[achievementId];
-                html += `
-                    <div style="padding: 15px; margin: 10px 0; background: ${achievement.unlocked ? 'var(--success)' : 'var(--dark-card)'}; color: white; border-radius: 10px; border: 1px solid ${achievement.unlocked ? 'var(--success)' : 'var(--text-muted)'};">
-                        <strong>${achievement.unlocked ? '✅' : '🔒'} ${achievement.name}</strong>
-                        <p style="margin: 5px 0 0 0; font-size: 0.9rem;">${achievement.description}</p>
-                    </div>
-                `;
+            let html = '<h3>🏆 My Achievements</h3><div style="text-align:left;">';
+            Object.keys(achievements).forEach(k => {
+                const a = achievements[k];
+                html += `<div style="padding:12px; margin:8px 0; background:${a.unlocked ? 'rgba(0,201,177,0.12)' : 'rgba(0,0,0,0.12)'}; border-radius:10px;">
+                    <strong>${a.unlocked ? '✅' : '🔒'} ${a.name}</strong>
+                    <p style="margin:6px 0 0 0; font-size:0.9rem;">${a.description}</p>
+                </div>`;
             });
-            
             html += '</div>';
-            document.getElementById('offlineContent').innerHTML = html;
+            const out = document.getElementById('offlineContent'); if (out) out.innerHTML = html;
         }
 
         function saveAchievements() {
-            try {
-                localStorage.setItem('harambeeAchievements', JSON.stringify(achievements));
-            } catch (e) {
-                console.error('Error saving achievements:', e);
-            }
+            try { localStorage.setItem('harambeeAchievements', JSON.stringify(achievements)); } catch(e){}
         }
 
         function loadAchievements() {
             try {
-                const saved = localStorage.getItem('harambeeAchievements');
-                if (saved) {
-                    const loaded = JSON.parse(saved);
-                    Object.keys(loaded).forEach(key => {
-                        if (achievements[key]) {
-                            achievements[key].unlocked = loaded[key].unlocked;
-                        }
-                    });
+                const s = localStorage.getItem('harambeeAchievements');
+                if (s) {
+                    const loaded = JSON.parse(s);
+                    Object.keys(loaded).forEach(k => { if (achievements[k]) achievements[k].unlocked = loaded[k].unlocked; });
                 }
-            } catch (e) {
-                console.error('Error loading achievements:', e);
-            }
+            } catch(e) { console.error('Error loading achievements', e); }
         }
 
-        function updateOnlineStatus() {
+        function updateOnlineStatusUI() {
             const offlineBanner = document.getElementById('offlineBanner');
             const offlineEntertainment = document.getElementById('offlineEntertainment');
-            
             if (!navigator.onLine) {
-                offlineBanner.style.display = 'block';
-                offlineEntertainment.style.display = 'block';
+                if (offlineBanner) offlineBanner.style.display = 'block';
+                if (offlineEntertainment) offlineEntertainment.style.display = 'block';
                 unlockAchievement('offline_explorer');
             } else {
-                offlineBanner.style.display = 'none';
-                offlineEntertainment.style.display = 'none';
+                if (offlineBanner) offlineBanner.style.display = 'none';
+                if (offlineEntertainment) offlineEntertainment.style.display = 'none';
             }
         }
 
-        // Initialize everything when DOM is loaded
+        //////////////////////////////
+        // Initialization (DOM ready)
+        //////////////////////////////
         document.addEventListener('DOMContentLoaded', function() {
-            const submissionProtector = new SubmissionProtector();
+            // Instantiate protector and expose globally
+            window.submissionProtector = new SubmissionProtector();
             submissionProtector.initialize();
-
-            // PWA Service Worker
-            if ('serviceWorker' in navigator) {  
-                navigator.serviceWorker.register('{{ url_for("static", filename="service-worker.js") }}')  
-                    .then(reg => console.log('✅ Service Worker registered:', reg))  
-                    .catch(err => console.log('❌ Service Worker registration failed:', err));  
-            }
-
-            // PWA Install Prompt
-            let deferredPrompt;
-            const installBtn = document.getElementById('install-btn');
-            
-            window.addEventListener('beforeinstallprompt', (e) => {
-                e.preventDefault();
-                deferredPrompt = e;
-                installBtn.style.display = 'block';
-            });
-
-            installBtn.addEventListener('click', async () => {
-                if (deferredPrompt) {
-                    deferredPrompt.prompt();
-                    const { outcome } = await deferredPrompt.userChoice;
-                    
-                    if (outcome === 'accepted') {
-                        installBtn.style.display = 'none';
-                        unlockAchievement('app_installer');
-                    }
-                    deferredPrompt = null;
-                }
-            });
-            
-            window.addEventListener('appinstalled', () => {
-                installBtn.style.display = 'none';
-            });
-
-            // Network status monitoring
-            window.addEventListener('online', updateOnlineStatus);
-            window.addEventListener('offline', updateOnlineStatus);
-            updateOnlineStatus();
 
             // Load achievements
             loadAchievements();
 
-            // Time display
-            function updateLocalTime() {  
-                const time = new Date();  
-                const formatter = new Intl.DateTimeFormat('en-KE', {  
-                    dateStyle: 'full',  
-                    timeStyle: 'medium',  
-                    timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,  
-                    hour12: false  
-                });  
-                document.getElementById("timestamp-display").textContent =  
-                    `🕒 ${formatter.format(time)}`;  
-            }  
+            // PWA service worker (server route)
+            if ('serviceWorker' in navigator) {
+                navigator.serviceWorker.register('{{ url_for("static", filename="service-worker.js") }}')
+                    .then(reg => console.log('ServiceWorker registered', reg))
+                    .catch(err => console.log('SW registration failed', err));
+            }
 
-            updateLocalTime();  
-            setInterval(updateLocalTime, 1000);  
+            // PWA install prompt handling
+            let deferredPrompt;
+            const installBtn = document.getElementById('install-btn');
+            window.addEventListener('beforeinstallprompt', (e) => {
+                e.preventDefault();
+                deferredPrompt = e;
+                if (installBtn) installBtn.style.display = 'inline-block';
+            });
 
+            if (installBtn) {
+                installBtn.addEventListener('click', async () => {
+                    if (!deferredPrompt) return;
+                    deferredPrompt.prompt();
+                    const choice = await deferredPrompt.userChoice;
+                    if (choice.outcome === 'accepted') {
+                        unlockAchievement('app_installer');
+                        installBtn.style.display = 'none';
+                    }
+                    deferredPrompt = null;
+                });
+            }
+
+            window.addEventListener('appinstalled', () => {
+                if (installBtn) installBtn.style.display = 'none';
+            });
+
+            // Network status events
+            window.addEventListener('online', updateOnlineStatusUI);
+            window.addEventListener('offline', updateOnlineStatusUI);
+            updateOnlineStatusUI();
+
+            // Timestamp display
+            function updateLocalTime() {
+                try {
+                    const time = new Date();
+                    const formatter = new Intl.DateTimeFormat('en-KE', {
+                        dateStyle: 'full',
+                        timeStyle: 'medium',
+                        timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+                        hour12: false
+                    });
+                    // Create timestamp element if absent
+                    let ts = document.getElementById('timestamp-display');
+                    if (!ts) {
+                        ts = document.createElement('div');
+                        ts.id = 'timestamp-display';
+                        ts.style.textAlign = 'center';
+                        ts.style.margin = '10px 0';
+                        ts.style.color = 'var(--text-muted)';
+                        const container = document.querySelector('.container');
+                        if (container) container.insertBefore(ts, container.firstChild);
+                    }
+                    ts.textContent = `🕒 ${formatter.format(time)}`;
+                } catch (e) { console.error(e); }
+            }
+            updateLocalTime();
+            setInterval(updateLocalTime, 1000);
+
+            // Auto-clear flash messages after 9s
+            setTimeout(() => {
+                const cards = document.querySelectorAll('.card');
+                cards.forEach(c => {
+                    // only hide temporary messages (heuristic: those near top)
+                    if (c.parentNode && c.parentNode === document.querySelector('.container')) {
+                        // keep main cards; we won't remove them automatically to avoid hiding UI
+                    }
+                });
+            }, 9000);
+
+            // URL param handlers for form feedback
+            const urlParams = new URLSearchParams(window.location.search);
+            if (urlParams.has('message')) {
+                const msg = urlParams.get('message');
+                if (msg && (msg.toLowerCase().includes('success') || msg.toLowerCase().includes('enrolled') || msg.toLowerCase().includes('already enrolled'))) {
+                    submissionProtector.handleSubmissionSuccess(msg);
+                }
+            }
+            if (urlParams.has('error')) {
+                submissionProtector.handleSubmissionError();
+            }
+
+            // Load achievements from storage
+            loadAchievements();
+
+            // If user is logged in, fetch game data periodically
             {% if session.get('user_id') %}
-            // Game data fetching for logged-in users
             function fetchGameData() {
                 fetch("/game_data")
                     .then(response => {
@@ -4167,76 +3713,105 @@ base_html = """
                         return response.json();
                     })
                     .then(data => {
-                        document.getElementById("next-game").textContent = data.upcoming_game
-                            ? `${data.upcoming_game.game_code} at ${data.upcoming_game.timestamp} (${data.upcoming_game.outcome_message})`
-                            : "No active game";
+                        // Next game
+                        const nextElem = document.getElementById("next-game");
+                        if (nextElem) {
+                            if (data.upcoming_game && data.upcoming_game.game_code && data.upcoming_game.timestamp) {
+                                nextElem.textContent = `${data.upcoming_game.game_code} at ${data.upcoming_game.timestamp} (${data.upcoming_game.outcome_message || ''})`;
+                            } else {
+                                nextElem.textContent = "No active game";
+                            }
+                        }
 
-                        let resultsContainer = document.getElementById("game-results");
-                        resultsContainer.innerHTML = "";
-                        data.completed_games.forEach(game => {
-                            resultsContainer.innerHTML += `
-                                <div class="game-result">
-                                    <p><strong>🎯 Game Code:</strong> ${game.game_code}</p>
-                                    <p><strong>🕒 Timestamp:</strong> ${game.timestamp}</p>
-                                    <p><strong>👥 Players:</strong> ${game.num_users}</p>
-                                    <p><strong>💰 Total Amount:</strong> ${game.total_amount}</p>
-                                    <p><strong>🏆 Winner:</strong> ${game.winner}</p>
-                                    <p><strong>🎁 Win Amount:</strong> ${game.winner_amount}</p>
-                                    <p><strong>📊 Outcome:</strong> ${game.outcome_message}</p>
-                                </div>
-                            `;
-                        });
+                        // Completed games list
+                        const resultsContainer = document.getElementById("game-results");
+                        if (resultsContainer) {
+                            resultsContainer.innerHTML = "";
+                            if (Array.isArray(data.completed_games) && data.completed_games.length) {
+                                data.completed_games.forEach(game => {
+                                    const div = document.createElement('div');
+                                    div.className = 'game-result';
+                                    div.innerHTML = `
+                                        <p><strong>🎯 Game Code:</strong> ${game.game_code}</p>
+                                        <p><strong>🕒 Timestamp:</strong> ${game.timestamp}</p>
+                                        <p><strong>👥 Players:</strong> ${game.num_users}</p>
+                                        <p><strong>💰 Total Amount:</strong> ${game.total_amount}</p>
+                                        <p><strong>🏆 Winner:</strong> ${game.winner}</p>
+                                        <p><strong>🎁 Win Amount:</strong> ${game.winner_amount}</p>
+                                        <p><strong>📊 Outcome:</strong> ${game.outcome_message}</p>
+                                    `;
+                                    resultsContainer.appendChild(div);
+                                });
+                            } else {
+                                resultsContainer.innerHTML = '<p style="color:var(--text-muted);">No recent completed games.</p>';
+                            }
+                        }
 
-                        if (data.current_user_queued) {
+                        // If current user queued
+                        if (data.current_user_queued && window.submissionProtector) {
                             submissionProtector.handleSubmissionSuccess('✅ Already enrolled in current game');
                         }
                     })
-                    .catch(error => {
-                        console.error("Error fetching game data:", error);
-                        document.getElementById("next-game").textContent = "Error loading game data";
+                    .catch(err => {
+                        console.error("Error fetching game data:", err);
+                        const nextElem = document.getElementById("next-game");
+                        if (nextElem) nextElem.textContent = "Error loading game data";
                     });
             }
 
-            fetchGameData();  
+            // Initial fetch and interval
+            fetchGameData();
             setInterval(fetchGameData, 9000);
 
-            // Initialize game animator
-            const gameAnimator = new GameAnimator();
-            gameAnimator.monitorGameStatus();
-            window.gameAnimator = gameAnimator;
-            {% endif %}  
+            // Initialize and start GameAnimator monitor
+            window.gameAnimator = new GameAnimator();
+            window.gameAnimator.monitorGameStatus();
+            {% endif %}
 
-            // Auto-clear messages
-            setTimeout(() => {
-                const errorElements = document.querySelectorAll('.error');
-                const messageElements = document.querySelectorAll('.message');
-                const warningElements = document.querySelectorAll('.warning');
-                
-                errorElements.forEach(el => el.style.display = 'none');
-                messageElements.forEach(el => el.style.display = 'none');
-                warningElements.forEach(el => el.style.display = 'none');
-            }, 9000);
-
-            // Handle URL parameters for form responses
-            const urlParams = new URLSearchParams(window.location.search);
-            
-            if (urlParams.has('message')) {
-                const message = urlParams.get('message');
-                if (message.includes('Successfully enrolled') || message.includes('already enrolled')) {
-                    submissionProtector.handleSubmissionSuccess(message);
+            // Expose common globals
+            window.handlePlayClick = function(event) {
+                // Basic UI-level double-click prevention, integrates with protector
+                if (window.submissionProtector && (window.submissionProtector.isSubmitting || window.submissionProtector.userEnrolled)) {
+                    event.preventDefault();
+                    event.stopImmediatePropagation();
+                    if (window.submissionProtector.isSubmitting) {
+                        window.submissionProtector.showTemporaryMessage('⏳ Processing your previous request...', 'warning');
+                    } else {
+                        window.submissionProtector.showTemporaryMessage('✅ Already enrolled in current game!', 'success');
+                    }
+                    return false;
                 }
-            }
-            
-            if (urlParams.has('error')) {
-                submissionProtector.handleSubmissionError();
-            }
+                const button = event.target;
+                if (button && button.disabled) { event.preventDefault(); return false; }
+                if (button) { button.disabled = true; button.innerHTML = '🎮 PROCESSING...'; }
 
-            // Make objects globally available
-            window.submissionProtector = submissionProtector;
-            window.handlePlayClick = handlePlayClick;
-        });
+                // Show animation quickly
+                const ga = window.gameAnimator || null;
+                if (ga && ga.playGameStart) {
+                    ga.playGameStart('...');
+                } else {
+                    const anim = document.getElementById('gameAnimation');
+                    const text = document.getElementById('animationText');
+                    if (anim && text) {
+                        text.textContent = 'Processing your play...';
+                        anim.style.display = 'flex';
+                        setTimeout(()=>{ anim.style.display = 'none'; }, 1500);
+                    }
+                }
+
+                // Re-enable after a short fail-safe if form doesn't navigate
+                setTimeout(() => {
+                    if (button) { button.disabled = false; button.innerHTML = '🎮 PLAY NOW & WIN BIG!'; }
+                }, 3000);
+
+                return true;
+            };
+
+            // Ensure online status UI is current
+            updateOnlineStatusUI();
+        }); // DOMContentLoaded
     </script>
-</body>  
+</body>
 </html>
 """
 
