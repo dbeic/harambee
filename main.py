@@ -555,7 +555,7 @@ def docs():
     
 
 @app.route("/logout")
-@login_required()
+#@login_required()
 @limiter.limit("5 per hour")
 def logout():
     session.pop('user_id', None)
@@ -608,7 +608,7 @@ def stream():
 
 
 @app.route("/game_data")
-@login_required()
+#@login_required()
 def game_data():
     try:
         with get_db_connection() as conn:
@@ -695,7 +695,7 @@ def game_data():
         }), 500
 
 @app.route("/play", methods=["POST"])
-@login_required()
+#@login_required()
 @limiter.limit("5 per minute")
 def play():
     user_id = session.get("user_id")
@@ -749,7 +749,7 @@ def play():
         return redirect(url_for("index", error="Unexpected error occurred."))
 
 @app.route("/admin/add_allowed_user", methods=["POST"])
-@login_required(role='admin')
+#@login_required(role='admin')
 @limiter.limit("50 per hour")
 def admin_add_allowed_user():
     if not session.get("is_admin"):
@@ -774,7 +774,7 @@ def admin_add_allowed_user():
             return redirect(url_for("admin_dashboard", error="Failed to add allowed username."))
 
 @app.route("/admin/dashboard")
-@login_required(role='admin')
+#@login_required(role='admin')
 @limiter.limit("5 per hour")
 def admin_dashboard():
     if not session.get("is_admin"):
@@ -797,7 +797,7 @@ def admin_dashboard():
     )  
         
 @app.route("/admin/visitor_log")
-@login_required(role='admin')
+#@login_required(role='admin')
 @limiter.limit("5 per hour")
 def view_visits():
     if not session.get("is_admin"):
@@ -832,7 +832,7 @@ def view_visits():
     """, logs=logs)
 
 @app.route("/admin/logout")
-@login_required(role='admin')
+#@login_required(role='admin')
 @limiter.limit("3 per hour")
 def admin_logout():
     session.clear()
@@ -848,7 +848,7 @@ def robots_txt():
 
 #OLD CODE
 @app.route("/admin/update_wallet", methods=["POST"])
-@login_required(role='admin')
+#@login_required(role='admin')
 @limiter.limit("50 per hour")
 def admin_update_wallet():
     if not session.get("is_admin"):
@@ -889,7 +889,7 @@ def admin_update_wallet():
         
 ###########
 @app.route("/cashbook")
-@login_required(role='admin')
+#@login_required(role='admin')
 @limiter.limit("5 per hour")
 def cashbook():
     if not session.get("is_admin"):
@@ -966,7 +966,7 @@ def cashbook():
 ###############
         
 @app.route("/withdraw", methods=["GET", "POST"])
-@login_required()
+#@login_required()
 @limiter.limit("3 per hour")
 def withdraw_request():
     if not session.get('user_id'):
@@ -1171,7 +1171,7 @@ def withdrawal_receipt(receipt_code):
     return render_template_string(withdrawal_receipt_html, withdrawal=withdrawal)
     
 @app.route("/admin/withdrawals")
-@login_required(role='admin')
+#@login_required(role='admin')
 @limiter.limit("50 per hour")
 def admin_withdrawals():
     if not session.get("is_admin"):
@@ -1197,7 +1197,7 @@ def admin_withdrawals():
         pending_count=pending_count)
 
 @app.route("/admin/process_withdrawal", methods=["POST"])
-@login_required(role='admin')
+#@login_required(role='admin')
 @limiter.limit("50 per hour")
 def process_withdrawal():
     if not session.get("is_admin"):
@@ -1283,7 +1283,7 @@ def process_withdrawal():
         return jsonify({"error": "System error"}), 500
         
 @app.route("/deposit", methods=["GET", "POST"])
-@login_required()
+#@login_required()
 @limiter.limit("5 per hour")
 def deposit_request():
     if not session.get('user_id'):
@@ -1357,7 +1357,7 @@ def deposit_voucher(voucher_code):
     return render_template_string(deposit_voucher_html, deposit=deposit)
 
 @app.route("/admin/process_deposit", methods=["POST"])
-@login_required(role='admin')
+#@login_required(role='admin')
 @limiter.limit("50 per hour")
 def process_deposit():
     if not session.get("is_admin"):
