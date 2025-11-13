@@ -3277,16 +3277,20 @@ base_html = """
                 day: 'numeric',
                 hour: '2-digit',
                 minute: '2-digit',
-                second: '2-digit'
+                second: '2-digit',
+                hour12: true
             };
-            document.getElementById('timestamp-display').textContent = 
-                'Current Time: ' + now.toLocaleDateString('en-US', options);
+    
+            const timestampElement = document.getElementById('timestamp-display');
+            if (timestampElement) {
+                timestampElement.textContent =         'Current Time: ' + now.toLocaleDateString('en-US', options);
+            }
         }
-        
+
         // Initialize
-        document.addEventListener('DOMContentLoaded', function() {
+        document. addEventListener('DOMContentLoaded',  function() {
             updateTimestamp();
-            setInterval(updateTimestamp, 1000);
+            setInterval(updateTimestamp, 1000);                
             
             // Check online status
             window.addEventListener('online', function() {
@@ -3301,8 +3305,7 @@ base_html = """
         });
     </script>
     <button id="install-btn">📱 Install App</button>
-    
-    <div class="container">               
+               
     <div class="logo-container">
         <div class="logo">
             <img src="{{ url_for('static', filename='piclog.png') }}" alt="Harambee Cash Logo" class="logo-image">
