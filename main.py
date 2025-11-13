@@ -2945,8 +2945,8 @@ base_html = """
             <a href="{{ url_for('register') }}">📝 Register</a>
             <a href="{{ url_for('login') }}">🔑 Login</a>
         {% else %}
-            <a href="{{ url_for('deposit') }}">💳 Deposit</a>
-            <a href="{{ url_for('withdraw') }}">📤 Withdraw</a>
+            <a href="{{ url_for('deposit_request') }}">💳 Deposit</a>
+            <a href="{{ url_for('withdraw_request') }}">📤 Withdraw</a>
             <a href="{{ url_for('index') }}">🎯 Games</a>
             <a href="{{ url_for('logout') }}">🚪 Logout</a>
             {% if session.get('is_admin') %}
