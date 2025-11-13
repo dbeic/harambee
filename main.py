@@ -1,5 +1,3 @@
-Kindly confirm if the geme_worker.py is working seamlessly with main.py
-:
 import os
 import psycopg2
 from psycopg2 import errors
