@@ -1,3 +1,5 @@
+Kindly confirm if the geme_worker.py is working seamlessly with main.py
+:
 import os
 import psycopg2
 from psycopg2 import errors
@@ -24,6 +26,7 @@ from werkzeug.security import generate_password_hash, check_password_hash
 from flask import send_from_directory
 from flask_wtf.csrf import CSRFProtect
 from datetime import datetime, timedelta, timezone
+from game_worker import run_game
 
 now = datetime.now()
 now_str = now.strftime("%Y-%m-%d %H:%M:%S")  # convert to string
@@ -267,38 +270,6 @@ def init_db():
 
 init_db()
 
-def test_database_integration():
-    try:
-        with get_db_connection() as conn:
-            cursor = conn.cursor()
-            cursor.execute("SELECT COUNT(*) FROM users")
-            result = cursor.fetchone()
-            logging.info(f"✅ Database integration test passed: {result[0]} users")
-            return True
-    except Exception as e:
-        logging.error(f"❌ Database integration test failed: {e}")
-        return False
-
-# Call after init_db()
-test_database_integration()
-
-
-def test_game_worker_integration():
-    try:
-        # Test timestamp function compatibility
-        timestamp = get_timestamp()
-        assert isinstance(timestamp, str)
-        assert '.' in timestamp  # Should have microseconds
-        
-        # Test notification function
-        notify_clients("test_event", {"status": "integration_test"})
-        
-        logging.info("✅ Game worker integration test passed")
-        return True
-    except Exception as e:
-        logging.error(f"❌ Game worker integration test failed: {e}")
-        return False
-
 def login_required(role=None):
     def decorator(f):
         @wraps(f)
@@ -369,6 +340,7 @@ def log_transaction(user_id, transaction_type, amount):
         logging.error(f"Error in log_transaction(): {e}")
 
 # --- Logging visitors / activity ---
+# --- Logging visitors / activity ---
 def log_visit_entry(ip_address, user_agent, referrer=None, page=None, timestamp=None):
     # Ensure timestamp is always a string
     if timestamp is None:
@@ -386,7 +358,6 @@ def log_visit_entry(ip_address, user_agent, referrer=None, page=None, timestamp=
             VALUES (%s, %s, %s, %s, %s)
         """, (ip_address, user_agent, referrer, page, ts))
         conn.commit()           
-
 
 @app.before_request
 def log_user_activity():
@@ -408,13 +379,27 @@ def log_user_activity():
             conn.commit()
     except Exception as e:
         logging.debug(f"Failed to log user activity: {e}")
-        
-        
+
+@app.before_request
+def log_visitor():
+    if request.path.startswith("/static"):
+        return
+    try:
+        ip = request.headers.get('X-Forwarded-For', request.remote_addr)
+        agent = request.headers.get('User-Agent', 'unknown')
+        ref = request.referrer or 'direct'
+        path = request.path
+        ts = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        log_visit_entry(ip, agent, ref, path, ts)
+    except Exception as e:
+        logging.debug(f"Visitor log error: {e}")
+
 # --- Static files route (exposed) ---
 @csrf.exempt
 @app.route("/static/<path:filename>")
 def static_files(filename):
     return send_from_directory("static", filename)
+
 
 #Routes
 @app.route("/")
@@ -2728,148 +2713,76 @@ base_html = """
             z-index: 1;
         }
 
-        /* Enhanced Logo Section */
-        .logo-section {
-            margin-bottom: 30px;
+        .logo-container {
+            margin-bottom: 25px;
             position: relative;
         }
-
-        .logo-container {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 20px;
-            margin-bottom: 20px;
-            flex-wrap: wrap;
-        }
-
-        .logo-icon {
-            width: 80px;
-            height: 80px;
-            background: var(--gold-gradient);
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            box-shadow: var(--shadow);
-            border: 3px solid var(--gold-dark);
-        }
-
-        .logo-icon-inner {
-            width: 60px;
-            height: 60px;
-            background: var(--dark-bg);
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 1.8rem;
-            font-weight: bold;
-            color: var(--gold-primary);
-        }
+        
+        .logo {
+            width: 150px;
+            height: 150px;
+            margin: 0 auto 15px;
+        }        
 
         .logo-text {
-            text-align: center;
-        }
-
-        .main-title {
-            font-size: 3rem;
+            font-size: 2rem;
             font-weight: 800;
-            background: var(--gold-gradient);
-            -webkit-background-clip: text;
-            background-clip: text;
-            color: transparent;
-            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
-            line-height: 1.1;
-            margin-bottom: 5px;
+            color: var(--dark-bg);
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.2);
+}
+
+        .logo-img {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+            border-radius: 50%;
+            filter: none !important;
         }
 
         .tagline {
-            font-size: 1.2rem;
+            font-size: 1.3rem;
+            margin-bottom: 30px;
             color: var(--text-gold);
             font-weight: 500;
             letter-spacing: 0.5px;
-            opacity: 0.9;
-        }
-
-        .welcome-badge {
-            display: inline-block;
-            background: var(--gold-gradient);
-            color: var(--dark-bg);
-            padding: 8px 20px;
-            border-radius: 50px;
-            font-weight: 700;
-            font-size: 0.9rem;
-            margin-top: 10px;
-            box-shadow: var(--shadow);
         }
 
         .balance-display {
             background: var(--gold-gradient-subtle);
             border: 1px solid rgba(212, 175, 55, 0.3);
             border-radius: var(--radius);
-            padding: 25px;
-            margin: 30px auto;
-            max-width: 320px;
+            padding: 20px;
+            margin: 25px auto;
+            max-width: 300px;
             box-shadow: var(--shadow);
             backdrop-filter: blur(10px);
             transition: var(--transition);
-            position: relative;
-            overflow: hidden;
-        }
-
-        .balance-display::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            height: 3px;
-            background: var(--gold-gradient);
         }
 
         .balance-display:hover {
             transform: translateY(-5px);
             box-shadow: var(--shadow-hover);
-            border-color: rgba(212, 175, 55, 0.5);
         }
 
         .balance-label {
             font-size: 1rem;
             color: var(--text-muted);
-            margin-bottom: 10px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 8px;
+            margin-bottom: 8px;
         }
 
         .balance-amount {
-            font-size: 2.5rem;
-            font-weight: 800;
+            font-size: 2.2rem;
+            font-weight: 700;
             color: var(--gold-secondary);
-            text-shadow: 0 0 20px rgba(255, 215, 0, 0.4);
-            line-height: 1;
+            text-shadow: 0 0 10px rgba(255, 215, 0, 0.3);
         }
 
         .welcome-section {
             margin: 30px 0;
-            padding: 30px;
+            padding: 25px;
             background: var(--gold-gradient-subtle);
             border-radius: var(--radius);
             border: 1px solid rgba(212, 175, 55, 0.2);
-            position: relative;
-        }
-
-        .welcome-section::before {
-            content: '✨';
-            position: absolute;
-            top: -15px;
-            left: 50%;
-            transform: translateX(-50%);
-            background: var(--dark-card);
-            padding: 0 15px;
-            font-size: 1.5rem;
         }
 
         .welcome-section h2 {
@@ -2897,7 +2810,7 @@ base_html = """
             background: var(--gold-gradient);
             color: var(--dark-bg);
             border: none;
-            padding: 16px 45px;
+            padding: 15px 40px;
             font-size: 1.2rem;
             font-weight: 700;
             border-radius: 50px;
@@ -2907,39 +2820,23 @@ base_html = """
             transition: var(--transition);
             letter-spacing: 0.5px;
             text-transform: uppercase;
-            position: relative;
-            overflow: hidden;
-        }
-
-        .cta-button::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: -100%;
-            width: 100%;
-            height: 100%;
-            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
-            transition: left 0.5s;
         }
 
         .cta-button:hover {
             transform: translateY(-3px);
             box-shadow: var(--shadow-hover);
-        }
-
-        .cta-button:hover::before {
-            left: 100%;
+            background: var(--gold-gradient-reverse);
         }
 
         .cta-button:disabled {
-            opacity: 0.6;
+            opacity: 0.7;
             cursor: not-allowed;
             transform: none;
         }
 
         .features-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
             gap: 20px;
             margin: 30px 0;
         }
@@ -2948,20 +2845,8 @@ base_html = """
             background: var(--gold-gradient-subtle);
             border: 1px solid rgba(212, 175, 55, 0.2);
             border-radius: var(--radius);
-            padding: 25px 20px;
+            padding: 20px 15px;
             transition: var(--transition);
-            position: relative;
-        }
-
-        .feature-card::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            height: 3px;
-            background: var(--gold-gradient);
-            border-radius: var(--radius) var(--radius) 0 0;
         }
 
         .feature-card:hover {
@@ -2971,28 +2856,26 @@ base_html = """
         }
 
         .feature-icon {
-            font-size: 2.8rem;
+            font-size: 2.5rem;
             margin-bottom: 15px;
             color: var(--gold-secondary);
-            text-shadow: 0 0 10px rgba(255, 215, 0, 0.3);
         }
 
         .feature-title {
-            font-size: 1.3rem;
+            font-size: 1.2rem;
             font-weight: 600;
-            margin-bottom: 12px;
+            margin-bottom: 10px;
             color: var(--text-gold);
         }
 
         .feature-desc {
-            font-size: 0.95rem;
+            font-size: 0.9rem;
             color: var(--text-muted);
-            line-height: 1.5;
         }
 
         .footer {
-            margin-top: 40px;
-            padding-top: 25px;
+            margin-top: 30px;
+            padding-top: 20px;
             border-top: 1px solid rgba(212, 175, 55, 0.2);
             color: var(--text-muted);
             font-size: 0.9rem;
@@ -3010,38 +2893,35 @@ base_html = """
             text-shadow: 0 0 10px rgba(255, 215, 0, 0.5);
         }
 
-        /* Status Messages */
+        /* Error and Message Styles */
         .error {
             background: rgba(255, 107, 53, 0.1);
             border: 1px solid var(--error);
             color: var(--error);
-            padding: 15px 20px;
+            padding: 15px;
             border-radius: var(--radius);
-            margin: 20px 0;
-            border-left: 4px solid var(--error);
+            margin: 15px 0;
         }
 
         .message {
             background: rgba(0, 201, 177, 0.1);
             border: 1px solid var(--success);
             color: var(--success);
-            padding: 15px 20px;
+            padding: 15px;
             border-radius: var(--radius);
-            margin: 20px 0;
-            border-left: 4px solid var(--success);
+            margin: 15px 0;
         }
 
         .warning {
             background: rgba(255, 209, 102, 0.1);
             border: 1px solid var(--warning);
             color: var(--warning);
-            padding: 15px 20px;
+            padding: 15px;
             border-radius: var(--radius);
-            margin: 20px 0;
-            border-left: 4px solid var(--warning);
+            margin: 15px 0;
         }
 
-        /* Game Windows */
+        /* Game Results Styles */
         .game-window {
             margin: 30px 0;
             padding: 25px;
@@ -3053,10 +2933,9 @@ base_html = """
         .game-result {
             background: rgba(0, 0, 0, 0.3);
             border-radius: var(--radius);
-            padding: 20px;
+            padding: 15px;
             margin: 15px 0;
             border-left: 4px solid var(--gold-primary);
-            text-align: left;
         }
 
         /* Enrollment Status */
@@ -3064,10 +2943,9 @@ base_html = """
             background: rgba(0, 201, 177, 0.1);
             border: 1px solid var(--success);
             color: var(--success);
-            padding: 15px 20px;
+            padding: 15px;
             border-radius: var(--radius);
-            margin: 20px 0;
-            border-left: 4px solid var(--success);
+            margin: 15px 0;
             animation: pulse 2s infinite;
         }
 
@@ -3083,68 +2961,144 @@ base_html = """
             margin-right: 10px;
         }
 
-        /* Action Buttons */
-        .action-buttons {
-            display: flex;
-            gap: 15px;
-            justify-content: center;
+        /* Offline Styles */
+        .offline-banner {
+            background: rgba(255, 107, 53, 0.1);
+            border: 1px solid var(--error);
+            color: var(--error);
+            padding: 20px;
+            border-radius: var(--radius);
             margin: 20px 0;
-            flex-wrap: wrap;
         }
 
-        .action-btn {
+        .offline-btn {
+            background: var(--gold-gradient-subtle);
+            border: 1px solid rgba(212, 175, 55, 0.3);
+            color: var(--text-gold);
+            padding: 12px 20px;
+            border-radius: var(--radius);
+            margin: 10px;
+            cursor: pointer;
+            transition: var(--transition);
+        }
+
+        .offline-btn:hover {
             background: var(--gold-gradient);
             color: var(--dark-bg);
-            border: none;
-            padding: 12px 25px;
-            border-radius: 50px;
-            font-weight: 600;
-            text-decoration: none;
+        }
+
+        /* Trivia Styles */
+        .trivia-option {
+            background: var(--gold-gradient-subtle);
+            border: 1px solid rgba(212, 175, 55, 0.3);
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: var(--radius);
+            cursor: pointer;
             transition: var(--transition);
-            box-shadow: var(--shadow);
         }
 
-        .action-btn:hover {
-            transform: translateY(-2px);
+        .trivia-option:hover {
+            background: rgba(212, 175, 55, 0.2);
+        }
+
+        .trivia-correct {
+            background: rgba(0, 201, 177, 0.2);
+            border-color: var(--success);
+        }
+
+        .trivia-wrong {
+            background: rgba(255, 107, 53, 0.2);
+            border-color: var(--error);
+        }
+
+        /* Achievement Notification */
+        .achievement-notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: var(--gold-gradient);
+            color: var(--dark-bg);
+            padding: 20px;
+            border-radius: var(--radius);
             box-shadow: var(--shadow-hover);
+            z-index: 1000;
+            animation: slideInRight 0.5s ease-out;
         }
 
-        .action-btn.success {
-            background: var(--success);
+        /* Game Animation */
+        .game-animation {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 999;
+            flex-direction: column;
+        }
+
+        .animation-content {
+            text-align: center;
             color: white;
         }
 
-        /* Social Icons */
+        .animated-image {
+            font-size: 8rem;
+            margin-bottom: 20px;
+            animation: bounce 1s infinite;
+        }
+
+        .animation-text {
+            font-size: 2rem;
+            font-weight: bold;
+            text-shadow: 0 0 10px rgba(255, 215, 0, 0.8);
+        }
+
+        .rocket, .confetti {
+            position: absolute;
+            font-size: 2rem;
+            animation: floatUp 2s ease-out forwards;
+        }
+
+        .confetti {
+            width: 10px;
+            height: 10px;
+            border-radius: 2px;
+        }
+
+        /* Social Icons - Updated for natural colors */
         .socials {
             display: flex;
             justify-content: center;
             gap: 15px;
-            margin: 25px 0;
+            margin: 20px 0;
         }
 
         .social-icon {
-            width: 45px;
-            height: 45px;
+            width: 40px;
+            height: 40px;
             display: flex;
             align-items: center;
             justify-content: center;
-            background: var(--gold-gradient-subtle);
+            background: transparent;
             border-radius: 50%;
             transition: var(--transition);
             border: 1px solid rgba(212, 175, 55, 0.3);
-            text-decoration: none;
         }
 
         .social-icon:hover {
             transform: translateY(-3px);
-            background: var(--gold-gradient);
-            box-shadow: var(--shadow);
+            background: var(--gold-gradient-subtle);
         }
 
         .social-icon img {
             width: 20px;
             height: 20px;
-            filter: brightness(0) invert(1);
+            filter: none !important;
         }
 
         /* Install Button */
@@ -3155,19 +3109,13 @@ base_html = """
             background: var(--gold-gradient);
             color: var(--dark-bg);
             border: none;
-            padding: 12px 20px;
+            padding: 10px 20px;
             border-radius: 50px;
             cursor: pointer;
             box-shadow: var(--shadow);
             display: none;
             z-index: 100;
             font-weight: 600;
-            transition: var(--transition);
-        }
-
-        #install-btn:hover {
-            transform: translateY(-2px);
-            box-shadow: var(--shadow-hover);
         }
 
         /* Animations */
@@ -3188,391 +3136,70 @@ base_html = """
 
         @keyframes bounce {
             0%, 100% { transform: translateY(0); }
-            50% { transform: translateY(-10px); }
+            50% { transform: translateY(-20px); }
         }
 
-        /* Responsive Design */
-        @media (max-width: 768px) {
-            .container {
-                padding: 25px 20px;
-                margin: 15px;
-            }
-            
-            .logo-container {
-                flex-direction: column;
-                gap: 15px;
-            }
-            
-            .main-title {
-                font-size: 2.2rem;
-            }
-            
-            .tagline {
-                font-size: 1.1rem;
-            }
-            
-            .balance-amount {
-                font-size: 2rem;
-            }
-            
-            .features-grid {
-                grid-template-columns: 1fr;
-            }
-            
-            .action-buttons {
-                flex-direction: column;
-                align-items: center;
-            }
-            
-            .action-btn {
-                width: 100%;
-                max-width: 250px;
-            }
-            
-            #install-btn {
-                top: 10px;
-                right: 10px;
-                padding: 10px 16px;
-                font-size: 0.9rem;
+        @keyframes floatUp {
+            to {
+                transform: translateY(-100vh) rotate(360deg);
+                opacity: 0;
             }
         }
 
         @media (max-width: 480px) {
-            .container {
-                padding: 20px 15px;
-            }
-            
-            .main-title {
-                font-size: 1.8rem;
-            }
-            
-            .welcome-section {
-                padding: 20px;
-            }
-            
-            .cta-button {
-                padding: 14px 30px;
-                font-size: 1.1rem;
-            }
-            
-            .feature-card {
-                padding: 20px 15px;
-            }
+            h1 { font-size: 2.2rem; }
+            .container { padding: 25px 15px; margin: 15px; }
+            .logo { width: 130px; height: 130px; }
+            .logo-text { font-size: 1.6rem; }
+            .balance-display { font-size: 1.2rem; min-width: 200px; padding: 15px; }
+            .balance-amount { font-size: 1.8rem; }
+            .welcome-section h2 { font-size: 1.5rem; }
+            .welcome-section h3 { font-size: 1.3rem; }
+            .cta-button { padding: 12px 30px; font-size: 1.1rem; }
+            .animated-image { font-size: 4rem; }
+            .animation-text { font-size: 1.5rem; }
+            #install-btn { top: 10px; right: 10px; padding: 8px 16px; font-size: 0.9rem; }
         }
     </style>
 </head>
 <body>
-    <button id="install-btn">📱 Install App</button>
-    
-    <div class="container">
-        <!-- Enhanced Logo Section -->
-        <div class="logo-section">
-            <div class="logo-container">
-                <div class="logo-icon">
-                    <div class="logo-icon-inner">
-                        HC
-                    </div>
-                </div>
-                <div class="logo-text">
-                    <h1 class="main-title">HARAMBEE CASH</h1>
-                    <p class="tagline">Play & Win Big with Golden Opportunities!</p>
-                    <div class="welcome-badge">
-                        🎮 Community Gaming Platform
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Current Time Display -->
-        <p id="timestamp-display" style="color: var(--text-muted); margin-bottom: 20px;">
-            <span style="color: var(--gold-light);">🕒</span> Loading time...
-        </p>
-
-        <!-- Status Messages -->
-        {% if error %}<div class="error">{{ error }}</div>{% endif %}  
-        {% if message %}<div class="message">{{ message }}</div>{% endif %}
-        {% if warning %}<div class="warning">{{ warning }}</div>{% endif %}
-
-        {% if not session.get('user_id') %}
-            <!-- Guest Welcome Section -->
-            <div class="welcome-section">
-                <h2>Welcome to <span class="gold-text">Harambee Cash</span></h2>
-                <p>Join Kenya's most exciting gaming platform where you can play and win real cash prizes with just Ksh. 1.00 per game!</p>
-                
-                <div style="text-align: center; margin: 30px 0;">
-                    <p style="font-size: 1.2rem; margin-bottom: 25px; color: var(--text-gold);">
-                        <strong>Ready to start winning?</strong>
-                    </p>
-                    <div class="action-buttons">
-                        <a href="/register" class="action-btn">
-                            🚀 Create Account
-                        </a>
-                        <a href="/login" class="action-btn success">
-                            🔑 Login
-                        </a>
-                    </div>
-                </div>
-
-                <!-- Features Grid -->
-                <div class="features-grid">
-                    <div class="feature-card">
-                        <div class="feature-icon">💰</div>
-                        <div class="feature-title">Win Real Cash</div>
-                        <div class="feature-desc">Play with just Ksh. 1.00 and win exciting cash prizes every 30 seconds</div>
-                    </div>
-                    <div class="feature-card">
-                        <div class="feature-icon">⚡</div>
-                        <div class="feature-title">Fast Games</div>
-                        <div class="feature-desc">New games every 30 seconds with instant results and automatic payouts</div>
-                    </div>
-                    <div class="feature-card">
-                        <div class="feature-icon">🛡️</div>
-                        <div class="feature-title">Secure & Safe</div>
-                        <div class="feature-desc">Advanced security with SSL encryption and fair gameplay guaranteed</div>
-                    </div>
-                    <div class="feature-card">
-                        <div class="feature-icon">🏆</div>
-                        <div class="feature-title">Community</div>
-                        <div class="feature-desc">Join thousands of Kenyan players winning together every day</div>
-                    </div>
-                </div>
-
-                <!-- How to Play -->
-                <h3>🎯 How to Play & Win</h3>
-                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin: 20px 0;">
-                    <div style="background: rgba(0,0,0,0.3); padding: 15px; border-radius: 10px; border-left: 3px solid var(--gold-primary);">
-                        <strong>1. Register</strong>
-                        <p style="font-size: 0.9rem; margin-top: 5px;">Create your free account in seconds</p>
-                    </div>
-                    <div style="background: rgba(0,0,0,0.3); padding: 15px; border-radius: 10px; border-left: 3px solid var(--gold-primary);">
-                        <strong>2. Deposit</strong>
-                        <p style="font-size: 0.9rem; margin-top: 5px;">Add funds to your wallet securely</p>
-                    </div>
-                    <div style="background: rgba(0,0,0,0.3); padding: 15px; border-radius: 10px; border-left: 3px solid var(--gold-primary);">
-                        <strong>3. Play</strong>
-                        <p style="font-size: 0.9rem; margin-top: 5px;">Join games with Ksh. 1.00 entry</p>
-                    </div>
-                    <div style="background: rgba(0,0,0,0.3); padding: 15px; border-radius: 10px; border-left: 3px solid var(--gold-primary);">
-                        <strong>4. Win</strong>
-                        <p style="font-size: 0.9rem; margin-top: 5px;">Get paid instantly when you win</p>
-                    </div>
-                </div>
-            </div>
-        {% else %}
-            <!-- User Dashboard -->
-            <div style="text-align: center; margin-bottom: 25px;">
-                <p style="font-size: 1.4rem; color: var(--text-gold); font-weight: 700;">
-                    Welcome back, <span class="gold-text">{{ session.get('username') }}</span>! 👋
-                </p>
-                <p style="color: var(--text-muted); font-size: 1rem;">
-                    Ready for your next win?
-                </p>
-            </div>
-
-            <!-- Wallet Balance -->
-            <div class="balance-display">
-                <div class="balance-label">
-                    <span>💰</span>
-                    Your Wallet Balance
-                </div>
-                <div class="balance-amount">
-                    Ksh. {{ wallet_balance | default(0.0) | float | round(2) }}
-                </div>
-            </div>
-
-            <!-- Enrollment Status -->
-            <div id="enrollmentStatus" class="enrollment-status" style="display: none;">
-                <span id="statusText"></span>
-            </div>
-
-            <!-- Main Play Button -->
-            <form method="POST" action="/play" id="playForm">  
-                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />  
-                <button type="submit" id="playButton" class="cta-button" onclick="return handlePlayClick(event)">
-                    🎮 PLAY NOW & WIN BIG!
-                </button>  
-            </form>
-
-            <!-- Action Buttons -->
-            <div class="action-buttons">
-                <a href="/deposit" class="action-btn">
-                    💰 Deposit Funds
-                </a>
-                <a href="/withdraw" class="action-btn success">
-                    📤 Withdraw Earnings
-                </a>
-            </div>
-
-            <!-- Logout -->
-            <div style="margin-top: 20px;">
-                <a href="/logout" style="color: var(--text-muted); text-decoration: none; font-size: 0.9rem;">
-                    🔓 Logout
-                </a>  
-            </div>
-            
-            <!-- Game Status Window -->
-            <div class="game-window">  
-                <h2 style="color: var(--text-gold); margin-bottom: 20px;">🎯 Game Status</h2>  
-                <p style="margin-bottom: 15px;">
-                    <strong>Next Game:</strong> 
-                    <span id="next-game" style="color: var(--gold-light);">Loading...</span>
-                </p>  
-                
-                <h3 style="color: var(--text-gold); margin: 25px 0 15px 0;">📊 Recent Results</h3>  
-                <div id="game-results" style="max-height: 400px; overflow-y: auto; padding: 10px;">
-                    <div style="color: var(--text-muted); padding: 20px;">
-                        Loading recent games...
-                    </div>
-                </div>  
-            </div>  
-        {% endif %}
-
-        <!-- Footer -->
-        <div class="footer">
-            <div style="margin-bottom: 20px;">
-                <a href="/terms" style="color: var(--text-gold); text-decoration: none; margin: 0 10px;">Terms</a> 
-                <span style="color: var(--text-muted);">•</span>
-                <a href="/privacy" style="color: var(--text-gold); text-decoration: none; margin: 0 10px;">Privacy</a>
-                <span style="color: var(--text-muted);">•</span>
-                <a href="/docs" style="color: var(--text-gold); text-decoration: none; margin: 0 10px;">Help</a>
-            </div>
-            
-            <!-- Social Links -->
-            <div class="socials">
-                <a href="https://m.facebook.com/jamesboyid.ochuna" target="_blank" title="Facebook" class="social-icon">
-                    <span>📘</span>
-                </a>
-                <a href="https://wa.me/254701207062" target="_blank" title="WhatsApp" class="social-icon">
-                    <span>💬</span>
-                </a>
-                <a href="tel:+254701207062" title="Call Us" class="social-icon">
-                    <span>📞</span>              
-                </a>  
-            </div>
-            
-            <p style="text-align: center; font-size: 0.85rem; margin-top: 15px; color: var(--text-muted);">
-                © 2025 Harambee Cash. All rights reserved.<br>
-                <span style="font-size: 0.75rem;">Play responsibly</span>
-            </p>
-        </div>  
-    </div>
-
     <script>
-        // Initialize time display
-        function updateLocalTime() {  
-            const time = new Date();  
-            const formatter = new Intl.DateTimeFormat('en-KE', {  
-                dateStyle: 'full',  
-                timeStyle: 'medium',  
-                timeZone: 'Africa/Nairobi',  
-                hour12: false  
-            });  
-            const timeElement = document.getElementById("timestamp-display");
-            if (timeElement) {
-                timeElement.innerHTML = `<span style="color: var(--gold-light);">🕒</span> ${formatter.format(time)}`;  
-            }
-        }  
-
-        // PWA Install Prompt
-        let deferredPrompt;
-        const installBtn = document.getElementById('install-btn');
-        
-        window.addEventListener('beforeinstallprompt', (e) => {
-            e.preventDefault();
-            deferredPrompt = e;
-            installBtn.style.display = 'block';
-        });
-
-        installBtn.addEventListener('click', async () => {
-            if (deferredPrompt) {
-                deferredPrompt.prompt();
-                const { outcome } = await deferredPrompt.userChoice;
-                
-                if (outcome === 'accepted') {
-                    installBtn.style.display = 'none';
-                }
-                deferredPrompt = null;
-            }
-        });
-        
-        window.addEventListener('appinstalled', () => {
-            installBtn.style.display = 'none';
-        });
-
-        // Game data fetching for logged-in users
-        {% if session.get('user_id') %}
-        function fetchGameData() {
-            fetch("/game_data")
-                .then(response => {
-                    if (!response.ok) throw new Error('Network response was not ok');
-                    return response.json();
-                })
-                .then(data => {
-                    const nextGameElement = document.getElementById("next-game");
-                    if (nextGameElement) {
-                        nextGameElement.textContent = data.upcoming_game
-                            ? `${data.upcoming_game.game_code} at ${data.upcoming_game.timestamp}`
-                            : "No active game";
-                    }
-
-                    const resultsContainer = document.getElementById("game-results");
-                    if (resultsContainer && data.completed_games) {
-                        if (data.completed_games.length === 0) {
-                            resultsContainer.innerHTML = '<div style="color: var(--text-muted); padding: 20px; text-align: center;">No games played yet. Be the first winner!</div>';
-                        } else {
-                            resultsContainer.innerHTML = data.completed_games.map(game => `
-                                <div class="game-result">
-                                    <p><strong>🎯 Game Code:</strong> ${game.game_code}</p>
-                                    <p><strong>🕒 Time:</strong> ${game.timestamp}</p>
-                                    <p><strong>👥 Players:</strong> ${game.num_users}</p>
-                                    <p><strong>💰 Total Pool:</strong> ${game.total_amount}</p>
-                                    <p><strong>🏆 Winner:</strong> ${game.winner}</p>
-                                    <p><strong>🎁 Win Amount:</strong> ${game.winner_amount}</p>
-                                </div>
-                            `).join('');
-                        }
-                    }
-                })
-                .catch(error => {
-                    console.error("Error fetching game data:", error);
-                    const nextGameElement = document.getElementById("next-game");
-                    if (nextGameElement) {
-                        nextGameElement.textContent = "Error loading game data";
-                    }
-                });
-        }
-
-        // Initial load and periodic updates
-        fetchGameData();  
-        setInterval(fetchGameData, 10000);
-        {% endif %}  
-
-        // Auto-clear messages after 8 seconds
-        setTimeout(() => {
-            const errorElements = document.querySelectorAll('.error');
-            const messageElements = document.querySelectorAll('.message');
-            const warningElements = document.querySelectorAll('.warning');
-            
-            errorElements.forEach(el => el.style.display = 'none');
-            messageElements.forEach(el => el.style.display = 'none');
-            warningElements.forEach(el => el.style.display = 'none');
-        }, 8000);
-
-        // Start time updates
-        updateLocalTime();  
-        setInterval(updateLocalTime, 1000);
-
-        // Simple play button handler (full implementation would be in external JS)
+        // Clear previous enrollment/play state on login page load
+        sessionStorage.removeItem('harambeeSubmissionState');
+    
+        // Handle play button click
         function handlePlayClick(event) {
+            if (window.submissionProtector && 
+                (window.submissionProtector.isSubmitting || window.submissionProtector.userEnrolled)) {
+                event.preventDefault();
+                event.stopImmediatePropagation();
+        
+                // Show immediate feedback
+                if (window.submissionProtector.isSubmitting) {
+                    window.submissionProtector.showTemporaryMessage('⏳ Processing your previous request...', 'warning');
+                } else if (window.submissionProtector.userEnrolled) {
+                    window.submissionProtector.showTemporaryMessage('✅ Already enrolled in current game!', 'message');
+                }
+        
+                return false;
+            }
+            
             const button = event.target;
+            
+            // Prevent double submission
             if (button.disabled) {
                 event.preventDefault();
                 return false;
             }
             
+            // Disable button to prevent double clicks
             button.disabled = true;
-            button.innerHTML = '<span class="loading-spinner"></span> PROCESSING...';
+            button.innerHTML = '🎮 PROCESSING...';
             
+            // Show loading animation
+            showGameAnimation('Processing your play...');
+            
+            // Re-enable button after 3 seconds if form doesn't submit
             setTimeout(() => {
                 button.disabled = false;
                 button.innerHTML = '🎮 PLAY NOW & WIN BIG!';
@@ -3580,7 +3207,168 @@ base_html = """
             
             return true;
         }
-     
+        
+        function showGameAnimation(message) {
+            const animation = document.getElementById('gameAnimation');
+            const text = document.getElementById('animationText');
+            text.textContent = message;
+            animation.style.display = 'flex';
+            
+            // Hide after 2 seconds
+            setTimeout(() => {
+                animation.style.display = 'none';
+            }, 2000);
+        }
+        
+        // Offline entertainment functions
+        function startTriviaGame() {
+            showGameAnimation('Starting Trivia Challenge!');
+            // Add your trivia game logic here
+        }
+        
+        function showGamingTips() {
+            const content = document.getElementById('offlineContent');
+            content.innerHTML = `
+                <div style="text-align: left; color: var(--text-muted); margin: 20px 0;">
+                    <h3 style="color: var(--text-gold);">🎯 Winning Strategies</h3>
+                    <ul style="margin: 15px 0; padding-left: 20px;">
+                        <li>Start with small bets to understand the game</li>
+                        <li>Set a budget and stick to it</li>
+                        <li>Take breaks between games</li>
+                        <li>Watch patterns in previous results</li>
+                        <li>Play responsibly and have fun!</li>
+                    </ul>
+                </div>
+            `;
+        }
+        
+        function showPracticeMode() {
+            showGameAnimation('Entering Practice Mode!');
+            // Add practice mode logic here
+        }
+        
+        function viewAchievements() {
+            showGameAnimation('Loading Achievements!');
+            // Add achievements logic here
+        }
+        
+        // Update timestamp
+        function updateTimestamp() {
+            const now = new Date();
+            const options = { 
+                weekday: 'long', 
+                year: 'numeric', 
+                month: 'long', 
+                day: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit',
+                second: '2-digit'
+            };
+            document.getElementById('timestamp-display').textContent = 
+                'Current Time: ' + now.toLocaleDateString('en-US', options);
+        }
+        
+        // Initialize
+        document.addEventListener('DOMContentLoaded', function() {
+            updateTimestamp();
+            setInterval(updateTimestamp, 1000);
+            
+            // Check online status
+            window.addEventListener('online', function() {
+                document.getElementById('offlineBanner').style.display = 'none';
+                document.getElementById('offlineEntertainment').style.display = 'none';
+            });
+            
+            window.addEventListener('offline', function() {
+                document.getElementById('offlineBanner').style.display = 'block';
+                document.getElementById('offlineEntertainment').style.display = 'block';
+            });
+        });
+    </script>
+    <button id="install-btn">📱 Install App</button>
+                
+    <div class="container">               
+        <div class="logo-container">
+            <div class="logo">
+                <img src="{{ url_for('static', filename='piclog.png') }}" alt="Harambee Cash Logo" class="logo-image">
+            </div>
+            <h1>HARAMBEE CASH</h1>
+            <p class="tagline">Play & Win Big with Golden Opportunities!</p>
+        </div>
+    </div>
+
+        <p id="timestamp-display">Loading time...</p>
+
+        {% if error %}<div class="error">{{ error }}</div>{% endif %}  
+        {% if message %}<div class="message">{{ message }}</div>{% endif %}
+        {% if warning %}<div class="warning">{{ warning }}</div>{% endif %}
+
+        {% if not session.get('user_id') %}
+            <div class="welcome-section">
+                <h2>Welcome to <span class="gold-text">Harambee Cash</span></h2>
+                <p>Join our exciting gaming platform where you can play and win real prizes!</p>
+                
+                <div style="text-align: center; margin: 25px 0;">
+                    <p style="font-size: 1.2rem; margin-bottom: 20px;"><strong>Ready to play?</strong></p>
+                    <a href="/register" style="display: inline-block; margin: 10px;">
+                        <button class="cta-button">Create Account</button>
+                    </a>
+                    <a href="/login" style="display: inline-block; margin: 10px;">
+                        <button class="cta-button" style="background: var(--gold-gradient-reverse);">Login</button>
+                    </a>
+                </div>
+
+                <div class="features-grid">
+                    <div class="feature-card">
+                        <div class="feature-icon">💰</div>
+                        <div class="feature-title">Win Real Cash</div>
+                        <div class="feature-desc">Play with just Ksh. 1.00 and win exciting cash prizes</div>
+                    </div>
+                    <div class="feature-card">
+                        <div class="feature-icon">⚡</div>
+                        <div class="feature-title">Fast Games</div>
+                        <div class="feature-desc">New games every 30 seconds with instant results</div>
+                    </div>
+                    <div class="feature-card">
+                        <div class="feature-icon">🛡️</div>
+                        <div class="feature-title">Secure & Safe</div>
+                        <div class="feature-desc">Advanced security with fair gameplay guaranteed</div>
+                    </div>
+                    <div class="feature-card">
+                        <div class="feature-icon">🏆</div>
+                        <div class="feature-title">Community</div>
+                        <div class="feature-desc">Join thousands of players winning together</div>
+                    </div>
+                </div>
+
+                <h3>How to Play</h3>
+                <ul style="text-align: left; display: inline-block; color: var(--text-muted);">
+                    <li>Create your free account</li>
+                    <li>Login to access games</li>
+                    <li>Play with just Ksh. 1.00 per round</li>
+                    <li>Win exciting cash prizes</li>
+                </ul>
+            </div>
+        {% else %}
+            <p style="font-size: 1.3rem; color: var(--text-gold); font-weight: 700;">Welcome back, {{ session.get('username') }}! 👋</p>  
+            <div class="balance-display">
+                <div class="balance-label">Your Wallet Balance</div>
+                <div class="balance-amount">Ksh. {{ wallet_balance | default(0.0) | float | round(2) }}</div>
+            </div>
+
+            <!-- Enrollment Status Display -->
+            <div id="enrollmentStatus" class="enrollment-status" style="display: none;">
+                <span id="statusText"></span>
+            </div>
+
+            <!-- Protected Form -->
+            <form method="POST" action="/play" id="playForm">  
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />  
+                <button type="submit" id="playButton" class="cta-button" onclick="return handlePlayClick(event)">
+                    🎮 PLAY NOW & WIN BIG!
+                </button>  
+            </form>
+            
             {% if session.get('user_id') %}
                 <div style="margin: 15px 0; display: flex; gap: 10px; justify-content: center; flex-wrap: wrap;">
                     <a href="/deposit" style="text-decoration: none;">
@@ -3667,7 +3455,7 @@ base_html = """
     </div>
 
     <script>  
-        // Game Submission Protection System
+// Game Submission Protection System
         class SubmissionProtector {
             constructor() {
                 this.isSubmitting = false;
@@ -3692,22 +3480,22 @@ base_html = """
 
             loadSubmissionState() {
                 const savedState = sessionStorage.getItem('harambeeSubmissionState');
-                if (savedState) {
-                    try {
-                        const state = JSON.parse(savedState);
-                        this.isSubmitting = state.isSubmitting || false;
-                        this.userEnrolled = state.userEnrolled || false;
-                        
-                        if (this.isSubmitting) {
-                            this.disablePlayButton('⏳ Processing...');
-                        } else if (this.userEnrolled) {
-                            this.showEnrollmentStatus('✅ Already enrolled in current game');
-                            this.disablePlayButton('✅ Already Enrolled');
-                        }
-                    } catch (e) {
-                        console.error('Error loading submission state:', e);
-                        this.resetState();
+                if (!savedState) return;
+
+                try {
+                    const state = JSON.parse(savedState);
+                    this.isSubmitting = state.isSubmitting || false;
+                    this.userEnrolled = state.userEnrolled || false;
+
+                    if (this.isSubmitting) {
+                        this.disablePlayButton('⏳ Processing...');
+                    } else if (this.userEnrolled) {
+                        this.showEnrollmentStatus('✅ Already enrolled in current game');
+                        this.disablePlayButton('✅ Already Enrolled');
                     }
+                } catch (e) {
+                    console.error('Error loading submission state:', e);
+                    this.resetState();
                 }
             }
 
@@ -3717,6 +3505,7 @@ base_html = """
                     userEnrolled: this.userEnrolled,
                     timestamp: Date.now()
                 };
+
                 try {
                     sessionStorage.setItem('harambeeSubmissionState', JSON.stringify(state));
                 } catch (e) {
@@ -3727,35 +3516,33 @@ base_html = """
             setupFormProtection() {
                 const form = document.getElementById('playForm');
                 const button = document.getElementById('playButton');
+                if (!form || !button) return;
 
-                if (form && button) {
-                    form.addEventListener('submit', (e) => {
-                        if (this.isSubmitting || this.userEnrolled) {
-                            e.preventDefault();
-                            e.stopImmediatePropagation();
-                            return false;
-                        }
-                        
-                        return this.handleFormSubmission();
-                    });
+                form.addEventListener('submit', (e) => {
+                    if (this.isSubmitting || this.userEnrolled) {
+                        e.preventDefault();
+                        e.stopImmediatePropagation();
+                        return false;
+                    }
+                    return this.handleFormSubmission();
+                });
 
-                    button.addEventListener('click', (e) => {
-                        if (this.isSubmitting || this.userEnrolled) {
-                            e.preventDefault();
-                            e.stopImmediatePropagation();
-                            return false;
-                        }
-                    }, true);
-                }
+                button.addEventListener('click', (e) => {
+                    if (this.isSubmitting || this.userEnrolled) {
+                        e.preventDefault();
+                        e.stopImmediatePropagation();
+                        return false;
+                    }
+                }, true);
             }
 
             setupBeforeUnload() {
                 window.addEventListener('beforeunload', (e) => {
-                    if (this.isSubmitting) {
-                        e.preventDefault();
-                        e.returnValue = 'Your game enrollment is being processed. Are you sure you want to leave?';
-                        return e.returnValue;
-                    }
+                    if (!this.isSubmitting) return;
+
+                    e.preventDefault();
+                    e.returnValue = 'Your game enrollment is being processed. Are you sure you want to leave?';
+                    return e.returnValue;
                 });
             }
 
@@ -3769,21 +3556,25 @@ base_html = """
                 this.saveSubmissionState();
 
                 this.submissionTimeout = setTimeout(() => {
-                    if (this.isSubmitting) {
-                        this.isSubmitting = false;
-                        this.enablePlayButton();
-                        this.saveSubmissionState();
-                        this.showTemporaryMessage('Submission timeout. Please try again.', 'warning');
-                    }
+                    if (!this.isSubmitting) return;
+
+                    this.isSubmitting = false;
+                    this.enablePlayButton();
+                    this.saveSubmissionState();
+                    this.showTemporaryMessage('Submission timeout. Please try again.', 'warning');
                 }, 10000);
 
                 return true;
             }
+        }
 
+            // Game Submission Protection System
+        class SubmissionProtector {
             handleSubmissionSuccess(message = '✅ Successfully enrolled in the next game!') {
                 clearTimeout(this.submissionTimeout);
                 this.isSubmitting = false;
                 this.userEnrolled = true;
+
                 this.showEnrollmentStatus(message);
                 this.disablePlayButton('✅ Already Enrolled');
                 this.saveSubmissionState();
@@ -3812,71 +3603,71 @@ base_html = """
                     const context = new (window.AudioContext || window.webkitAudioContext)();
                     const oscillator = context.createOscillator();
                     const gainNode = context.createGain();
-                    
+
                     oscillator.connect(gainNode);
                     gainNode.connect(context.destination);
-                    
+
                     oscillator.frequency.value = 800;
                     oscillator.type = 'sine';
-                    
+
                     gainNode.gain.setValueAtTime(0.3, context.currentTime);
                     gainNode.gain.exponentialRampToValueAtTime(0.01, context.currentTime + 0.5);
-                    
+
                     oscillator.start(context.currentTime);
                     oscillator.stop(context.currentTime + 0.5);
-                } catch (e) {
+                } catch {
                     console.log('Web Audio API not supported');
                 }
             }
 
             disablePlayButton(text = '⏳ Processing...') {
                 const button = document.getElementById('playButton');
-                if (button) {
-                    button.disabled = true;
-                    button.innerHTML = `<span class="loading-spinner"></span>${text}`;
-                }
+                if (!button) return;
+
+                button.disabled = true;
+                button.innerHTML = `<span class="loading-spinner"></span>${text}`;
             }
 
             enablePlayButton() {
                 const button = document.getElementById('playButton');
-                if (button) {
-                    button.disabled = false;
-                    button.innerHTML = '🎮 PLAY NOW & WIN BIG!';
-                }
+                if (!button) return;
+
+                button.disabled = false;
+                button.innerHTML = '🎮 PLAY NOW & WIN BIG!';
             }
 
             showEnrollmentStatus(message) {
                 const statusDiv = document.getElementById('enrollmentStatus');
                 const statusText = document.getElementById('statusText');
-                if (statusDiv && statusText) {
-                    statusText.textContent = message;
-                    statusDiv.style.display = 'block';
-                }
+                if (!statusDiv || !statusText) return;
+
+                statusText.textContent = message;
+                statusDiv.style.display = 'block';
             }
 
             hideEnrollmentStatus() {
                 const statusDiv = document.getElementById('enrollmentStatus');
-                if (statusDiv) {
-                    statusDiv.style.display = 'none';
-                }
+                if (!statusDiv) return;
+
+                statusDiv.style.display = 'none';
             }
 
             showTemporaryMessage(message, type = 'error') {
+                const container = document.querySelector('.container');
+                if (!container) return;
+
                 const messageDiv = document.createElement('div');
                 messageDiv.className = type;
                 messageDiv.textContent = message;
                 messageDiv.style.margin = '10px 0';
-                
-                const container = document.querySelector('.container');
-                if (container) {
-                    container.insertBefore(messageDiv, container.firstChild);
-                    
-                    setTimeout(() => {
-                        if (messageDiv.parentNode) {
-                            messageDiv.parentNode.removeChild(messageDiv);
-                        }
-                    }, 5000);
-                }
+
+                container.insertBefore(messageDiv, container.firstChild);
+
+                setTimeout(() => {
+                    if (messageDiv.parentNode) {
+                        messageDiv.parentNode.removeChild(messageDiv);
+                    }
+                }, 5000);
             }
 
             resetState() {
@@ -3885,9 +3676,10 @@ base_html = """
                 clearTimeout(this.submissionTimeout);
                 this.enablePlayButton();
                 this.hideEnrollmentStatus();
+
                 try {
                     sessionStorage.removeItem('harambeeSubmissionState');
-                } catch (e) {}
+                } catch {}
             }
         }
 
@@ -3904,30 +3696,28 @@ base_html = """
             async playGameStart(gameCode) {
                 if (this.animationActive) return;
                 this.animationActive = true;
-                
+
                 this.animatedImage.innerHTML = '🚀';
                 this.animationText.textContent = `GAME ${gameCode} STARTED!`;
                 this.animation.className = 'game-animation game-start';
                 this.animation.style.display = 'flex';
-                
+
                 this.createRocketEffect();
-                
-                setTimeout(() => {
-                    this.hideAnimation();
-                }, 3000);
+
+                setTimeout(() => this.hideAnimation(), 3000);
             }
 
             async playGameEnd(gameCode, winner, amount) {
                 if (this.animationActive) return;
                 this.animationActive = true;
-                
+
                 this.animatedImage.innerHTML = '🎉';
                 this.animationText.textContent = `WINNER: ${winner} 🏆 Ksh.${amount}`;
                 this.animation.className = 'game-animation game-end';
                 this.animation.style.display = 'flex';
-                
+
                 this.createConfettiEffect();
-                
+
                 setTimeout(() => {
                     this.hideAnimation();
                     if (window.submissionProtector) {
@@ -3944,11 +3734,9 @@ base_html = """
                         rocket.innerHTML = '🚀';
                         rocket.style.left = `${20 + i * 30}%`;
                         this.animation.appendChild(rocket);
-                        
+
                         setTimeout(() => {
-                            if (rocket.parentNode) {
-                                rocket.parentNode.removeChild(rocket);
-                            }
+                            if (rocket.parentNode) rocket.parentNode.removeChild(rocket);
                         }, 2000);
                     }, i * 300);
                 }
@@ -3964,11 +3752,9 @@ base_html = """
                         confetti.style.background = colors[Math.floor(Math.random() * colors.length)];
                         confetti.style.animationDelay = `${Math.random() * 2}s`;
                         this.animation.appendChild(confetti);
-                        
+
                         setTimeout(() => {
-                            if (confetti.parentNode) {
-                                confetti.parentNode.removeChild(confetti);
-                            }
+                            if (confetti.parentNode) confetti.parentNode.removeChild(confetti);
                         }, 3000);
                     }, i * 50);
                 }
@@ -3976,40 +3762,44 @@ base_html = """
 
             hideAnimation() {
                 this.animation.style.display = 'none';
+
                 const effects = this.animation.querySelectorAll('.confetti, .rocket');
                 effects.forEach(effect => {
-                    if (effect.parentNode) {
-                        effect.parentNode.removeChild(effect);
-                    }
+                    if (effect.parentNode) effect.parentNode.removeChild(effect);
                 });
+
                 this.animationActive = false;
             }
 
             monitorGameStatus() {
                 setInterval(() => {
                     if (!navigator.onLine) return;
-                    
+
                     fetch('/game_data')
                         .then(response => {
                             if (!response.ok) throw new Error('Network error');
                             return response.json();
                         })
                         .then(data => {
-                            if (data.in_progress_game) {
-                                const currentGame = data.in_progress_game;
-                                
-                                if (currentGame.status === 'in progress' && 
-                                    (!this.lastGameStatus || this.lastGameStatus.status !== 'in progress')) {
-                                    this.playGameStart(currentGame.game_code);
-                                }
-                                
-                                if (currentGame.status === 'completed' && 
-                                    this.lastGameStatus && this.lastGameStatus.status === 'in progress') {
-                                    this.playGameEnd(currentGame.game_code, currentGame.winner, currentGame.winner_amount);
-                                }
-                                
-                                this.lastGameStatus = {...currentGame};
+                            const currentGame = data.in_progress_game;
+                            if (!currentGame) return;
+
+                            if (
+                                currentGame.status === 'in progress' &&
+                                (!this.lastGameStatus || this.lastGameStatus.status !== 'in progress')
+                            ) {
+                                this.playGameStart(currentGame.game_code);
                             }
+
+                            if (
+                                currentGame.status === 'completed' &&
+                                this.lastGameStatus &&
+                                this.lastGameStatus.status === 'in progress'
+                            ) {
+                                this.playGameEnd(currentGame.game_code, currentGame.winner, currentGame.winner_amount);
+                            }
+
+                            this.lastGameStatus = { ...currentGame };
                         })
                         .catch(error => console.error('Error monitoring game status:', error));
                 }, 2000);
@@ -5238,13 +5028,11 @@ DOCS_CONTENT = """
 </html>
 """
 
-# main.py
+# --- Background game loop start ---
 @app.before_first_request
 def start_background_game_loop():
     thread = threading.Thread(target=run_game, daemon=True)
     thread.start()
-    logging.info("🎮 Game loop started")
-
 
 # --- Run ---
 if __name__ == "__main__":
