@@ -2944,6 +2944,7 @@ base_html = """
         {% if not session.get('user_id') %}
             <a href="{{ url_for('register') }}">📝 Register</a>
             <a href="{{ url_for('login') }}">🔑 Login</a>
+            <a href="{{ url_for('deposit_request') }}">💳 Deposit</a>            
         {% else %}
             <a href="{{ url_for('deposit_request') }}">💳 Deposit</a>
             <a href="{{ url_for('withdraw_request') }}">📤 Withdraw</a>
