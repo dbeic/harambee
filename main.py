@@ -2923,6 +2923,32 @@ base_html = """
             </div>
         </div>
 
+        <div class="header-actions">
+            {% if session.get('user_id') %}
+                <div class="wallet-badge">Ksh. {{ wallet_balance | default(0.0) | float | round(2) }}</div>
+            {% else %}
+                <a href="{{ url_for('login') }}" class="cta-button" style="padding:8px 12px; font-size:0.95rem;">Login</a>
+            {% endif %}
+        </div>
+    </header>
+
+    <!-- Navigation -->
+    <nav>
+        <a href="{{ url_for('index') }}">🏠 Home</a>
+        {% if not session.get('user_id') %}
+            <a href="{{ url_for('register') }}">📝 Register</a>
+            <a href="{{ url_for('login') }}">🔑 Login</a>
+        {% else %}
+            <a href="{{ url_for('deposit') }}">💳 Deposit</a>
+            <a href="{{ url_for('withdraw') }}">📤 Withdraw</a>
+            <a href="{{ url_for('index') }}">🎯 Games</a>
+            <a href="{{ url_for('logout') }}">🚪 Logout</a>
+            {% if session.get('is_admin') %}
+                <a href="{{ url_for('admin_dashboard') }}">🛠 Admin</a>
+            {% endif %}
+        {% endif %}
+    </nav>
+
     <div class="container">
         <!-- Flash messages (kept to work with Flask's flash) -->
         {% with messages = get_flashed_messages(with_categories=true) %}
