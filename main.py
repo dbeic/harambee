@@ -2920,10 +2920,7 @@ base_html = """
             <div>
                 <div class="site-title">HARAMBEE CASH</div>
                 <div class="tagline" style="font-size:0.85rem; margin-top:4px;">Play & Win Big with Golden Opportunities!</div>
-            </div>        
-        <div class="site-logo" style="align-items:center;">
-            <img src="{{ url_for('static', filename='piclog.png') }}" alt="Harambee Cash Logo" />
-            <div>                   
+            </div>                          
             <div class="header-actions">
                 {% if session.get('user_id') %}
                     <div class="wallet-badge">Ksh. {{ wallet_balance | default(0.0) | float |  round(2) }}</div>
@@ -2971,6 +2968,18 @@ base_html = """
         
         {% if not session.get('user_id') %}
             <!-- Guest UI - login/register forms would be here -->
+            <div style="margin-top:20px;" class="card">
+                <p style="color:var(--text-muted);">Explore our documentation or contact support if you need help.</p>
+            </div>
+            <div style="margin-top:18px; text-align:left; display:inline-block; color:var(--text-muted);">
+                <h3 style="color:var(--text-gold);">How to Play</h3>
+                <ul>
+                    <li>Create your free account</li>
+                    <li>Login to access games</li>
+                    <li>Play with just Ksh. 1.00 per round</li>
+                    <li>Win exciting cash prizes</li>
+                </ul>
+            </div>                        
         {% else %}
         <!-- Logged-in UI -->
         <div style="text-align:center; margin-bottom:14px;">
@@ -3011,16 +3020,6 @@ base_html = """
                     <div style="color:var(--text-muted); margin-top:6px;">Join thousands of players winning together</div>
                 </div>
             </div>
-
-            <div style="margin-top:18px; text-align:left; display:inline-block; color:var(--text-muted);">
-                <h3 style="color:var(--text-gold);">How to Play</h3>
-                <ul>
-                    <li>Create your free account</li>
-                    <li>Login to access games</li>
-                    <li>Play with just Ksh. 1.00 per round</li>
-                    <li>Win exciting cash prizes</li>
-                </ul>
-            </div>
         </div>        
 
         <!-- Offline Content (hidden/shown via JS) -->
@@ -3042,10 +3041,6 @@ base_html = """
                 </div>
                 <div id="offlineContent" style="margin-top:14px;"></div>
             </div>
-        </div>
-
-        <div style="margin-top:20px;" class="card">
-            <p style="color:var(--text-muted);">Explore our documentation or contact support if you need help.</p>
         </div>
 
     </div> <!-- /.container -->
