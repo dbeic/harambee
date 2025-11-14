@@ -2921,8 +2921,10 @@ base_html = """
                 <div class="site-title">HARAMBEE CASH</div>
                 <div class="tagline" style="font-size:0.85rem; margin-top:4px;">Play & Win Big with Golden Opportunities!</div>
             </div>
+            <div class="header-actions">
+                {% if session.get('user_id') %}
+                    <div class="wallet-badge">Ksh. {{ wallet_balance | default(0.0) | float |  round(2) }}</div>                       
         </div>
-    
     </header>
 
     <!-- Navigation -->
@@ -2955,21 +2957,6 @@ base_html = """
         {% if error %}<div class="card" style="border-left:4px solid var(--error); color:var(--error);">{{ error }}</div>{% endif %}
         {% if message %}<div class="card" style="border-left:4px solid var(--success); color:var(--success);">{{ message }}</div>{% endif %}
         {% if warning %}<div class="card" style="border-left:4px solid var(--warning); color:var(--warning);">{{ warning }}</div>{% endif %}
-
-        <!-- Not logged in -->
-        {% if not session.get('user_id') %}
-        <div class="card" style="text-align:center;">
-            <h2>Welcome to <span style="color:var(--gold-secondary); font-weight:800;">Harambee Cash</span></h2>
-            <p style="color:var(--text-muted); margin-top:8px;">Join our exciting gaming platform where you can play and win real prizes!</p>
-
-            <div style="margin-top:18px;">
-                <a href="{{ url_for('register') }}" style="text-decoration:none; margin-right:8px;">
-                    <button class="cta-button">Create Account</button>
-                </a>
-                <a href="{{ url_for('login') }}" style="text-decoration:none;">
-                    <button class="cta-button" style="background: var(--gold-gradient-reverse);">Login</button>
-                </a>
-            </div>
 
             <div class="features-grid" style="margin-top:20px;">
                 <div class="feature-card">
@@ -3011,24 +2998,11 @@ base_html = """
             <p style="font-size:1.1rem; color:var(--text-gold); font-weight:700;">Welcome back, {{ session.get('username') }}! 👋</p>
         </div>
 
-        <div style="display:flex; gap:16px; flex-wrap:wrap; justify-content:center; align-items:center; margin-bottom:16px;">
-            <div class="balance-display">
-                <div class="balance-label">Your Wallet Balance</div>
-                <div class="balance-amount">Ksh. {{ wallet_balance | default(0.0) | float | round(2) }}</div>
-            </div>
-
-            <div id="enrollmentStatus" class="card" style="display:none; min-width:220px; align-self:center;">
-                <div id="statusText"></div>
-            </div>
-        </div>
-
         <!-- Play form -->
         <form method="POST" action="{{ url_for('play') }}" id="playForm" style="text-align:center; margin-bottom:16px;">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
             <button type="submit" id="playButton" class="cta-button" >🎮 PLAY NOW & WIN BIG!</button>
         </form>
-
-        <a href="{{ url_for('logout') }}" style="display:inline-block; margin-top:6px; color:var(--text-gold); text-decoration:none;">Logout</a>
 
         <!-- Game status & recent results -->
         <div class="game-window">
