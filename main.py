@@ -3025,14 +3025,8 @@ base_html = """
         <!-- Play form -->
         <form method="POST" action="{{ url_for('play') }}" id="playForm" style="text-align:center; margin-bottom:16px;">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
-            <button type="submit" id="playButton" class="cta-button" onclick="return handlePlayClick(event)">🎮 PLAY NOW & WIN BIG!</button>
+            <button type="submit" id="playButton" class="cta-button" >🎮 PLAY NOW & WIN BIG!</button>
         </form>
-
-        <div style="display:flex; gap:12px; justify-content:center; flex-wrap:wrap; margin-bottom:14px;">
-            <a href="{{ url_for('withdraw') }}" style="text-decoration:none;">
-                <button class="cta-button" style="background:var(--gold-gradient);">📤 Withdraw Earnings</button>
-            </a>
-        </div>
 
         <a href="{{ url_for('logout') }}" style="display:inline-block; margin-top:6px; color:var(--text-gold); text-decoration:none;">Logout</a>
 
