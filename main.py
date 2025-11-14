@@ -962,7 +962,7 @@ def cashbook():
 @app.route("/withdraw", methods=["GET", "POST"])
 @login_required()
 @limiter.limit("3 per hour")
-def withdraw_request():
+def withdraw():
     if not session.get('user_id'):
         return redirect(url_for('login'))
     
@@ -1279,7 +1279,7 @@ def process_withdrawal():
 @app.route("/deposit", methods=["GET", "POST"])
 @login_required()
 @limiter.limit("5 per hour")
-def deposit_request():
+def deposit():
     if not session.get('user_id'):
         return redirect(url_for('login'))
     
