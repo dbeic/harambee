@@ -2924,11 +2924,11 @@ base_html = """
             <div class="header-actions">
                 {% if session.get('user_id') %}
                     <div class="wallet-badge">Ksh. {{ wallet_balance | default(0.0) | float |  round(2) }}</div>
-            <!-- Play form -->
-            <form method="POST" action="{{ url_for('play') }}" id="playForm" style="text-align:center; margin-bottom:16px;">
-                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
-                <button type="submit" id="playButton" class="cta-button" >🎮 PLAY NOW & WIN BIG!</button>
-            </form>                    
+                <!-- Play form -->
+                <form method="POST" action="{{ url_for('play') }}" id="playForm" style="text-align:center; margin-bottom:16px;">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+                    <button type="submit" id="playButton" class="cta-button" >🎮 PLAY NOW & WIN BIG!</button>
+                </form>                    
                 {% endif %}
         </div>                          
     
@@ -2979,26 +2979,8 @@ base_html = """
                     <li>Play with just Ksh. 1.00 per round</li>
                     <li>Win exciting cash prizes</li>
                 </ul>
-            </div>                        
-        {% else %}
-        <!-- Logged-in UI -->
-        <div style="text-align:center; margin-bottom:14px;">
-            <p style="font-size:1.1rem; color:var(--text-gold); font-weight:700;">Welcome back, {{ session.get('username') }}! 👋</p>
-        </div>
-
-        <!-- Game status & recent results -->
-        <div class="game-window">
-            <h2>Game Status</h2>
-            <p><strong>Next Game:</strong> <span id="next-game">Loading...</span></p>
-
-            <h2 style="margin-top:18px;">Recent Results (Last 50 Games)</h2>
-            <div id="game-results">
-                Loading recent games...
             </div>
-        </div>
-        {% endif %}
-        
-            <div class="features-grid" style="margin-top:20px;">
+           <div class="features-grid" style="margin-top:20px;">
                 <div class="feature-card">
                     <div style="font-size:1.6rem;">💰</div>
                     <div style="font-weight:700; margin-top:8px; color:var(--text-gold);">Win Real Cash</div>
@@ -3020,7 +3002,24 @@ base_html = """
                     <div style="color:var(--text-muted); margin-top:6px;">Join thousands of players winning together</div>
                 </div>
             </div>
-        </div>        
+        </div>                                    
+        {% else %}
+        <!-- Logged-in UI -->
+        <div style="text-align:center; margin-bottom:14px;">
+            <p style="font-size:1.1rem; color:var(--text-gold); font-weight:700;">Welcome back, {{ session.get('username') }}! 👋</p>
+        </div>
+
+        <!-- Game status & recent results -->
+        <div class="game-window">
+            <h2>Game Status</h2>
+            <p><strong>Next Game:</strong> <span id="next-game">Loading...</span></p>
+
+            <h2 style="margin-top:18px;">Recent Results (Last 50 Games)</h2>
+            <div id="game-results">
+                Loading recent games...
+            </div>
+        </div>
+        {% endif %}        
 
         <!-- Offline Content (hidden/shown via JS) -->
         <div id="offlineBanner" class="offline-banner" style="display:none;">
