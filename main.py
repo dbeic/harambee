@@ -2934,10 +2934,6 @@ base_html = """
 
     <!-- Navigation -->
     <nav>
-        <a href="{{ url_for('index') }}">🏠 Home</a>
-        {% if not session.get('user_id') %}
-            <a href="{{ url_for('register') }}">📝 Register</a>
-            <a href="{{ url_for('login') }}">🔑 Login</a>
         {% else %}
             <a href="{{ url_for('deposit') }}">💳 Deposit</a>
             <a href="{{ url_for('withdraw') }}">📤 Withdraw</a>
@@ -2963,55 +2959,6 @@ base_html = """
         {% if error %}<div class="card" style="border-left:4px solid var(--error); color:var(--error);">{{ error }}</div>{% endif %}
         {% if message %}<div class="card" style="border-left:4px solid var(--success); color:var(--success);">{{ message }}</div>{% endif %}
         {% if warning %}<div class="card" style="border-left:4px solid var(--warning); color:var(--warning);">{{ warning }}</div>{% endif %}
-
-        <!-- Not logged in -->
-        {% if not session.get('user_id') %}
-        <div class="card" style="text-align:center;">
-            <h2>Welcome to <span style="color:var(--gold-secondary); font-weight:800;">Harambee Cash</span></h2>
-            <p style="color:var(--text-muted); margin-top:8px;">Join our exciting gaming platform where you can play and win real prizes!</p>
-
-            <div style="margin-top:18px;">
-                <a href="{{ url_for('register') }}" style="text-decoration:none; margin-right:8px;">
-                    <button class="cta-button">Create Account</button>
-                </a>
-                <a href="{{ url_for('login') }}" style="text-decoration:none;">
-                    <button class="cta-button" style="background: var(--gold-gradient-reverse);">Login</button>
-                </a>
-            </div>
-
-            <div class="features-grid" style="margin-top:20px;">
-                <div class="feature-card">
-                    <div style="font-size:1.6rem;">💰</div>
-                    <div style="font-weight:700; margin-top:8px; color:var(--text-gold);">Win Real Cash</div>
-                    <div style="color:var(--text-muted); margin-top:6px;">Play with just Ksh. 1.00 and win exciting cash prizes</div>
-                </div>
-                <div class="feature-card">
-                    <div style="font-size:1.6rem;">⚡</div>
-                    <div style="font-weight:700; margin-top:8px; color:var(--text-gold);">Fast Games</div>
-                    <div style="color:var(--text-muted); margin-top:6px;">New games every 30 seconds with instant results</div>
-                </div>
-                <div class="feature-card">
-                    <div style="font-size:1.6rem;">🛡️</div>
-                    <div style="font-weight:700; margin-top:8px; color:var(--text-gold);">Secure & Safe</div>
-                    <div style="color:var(--text-muted); margin-top:6px;">Advanced security with fair gameplay guaranteed</div>
-                </div>
-                <div class="feature-card">
-                    <div style="font-size:1.6rem;">🏆</div>
-                    <div style="font-weight:700; margin-top:8px; color:var(--text-gold);">Community</div>
-                    <div style="color:var(--text-muted); margin-top:6px;">Join thousands of players winning together</div>
-                </div>
-            </div>
-
-            <div style="margin-top:18px; text-align:left; display:inline-block; color:var(--text-muted);">
-                <h3 style="color:var(--text-gold);">How to Play</h3>
-                <ul>
-                    <li>Create your free account</li>
-                    <li>Login to access games</li>
-                    <li>Play with just Ksh. 1.00 per round</li>
-                    <li>Win exciting cash prizes</li>
-                </ul>
-            </div>
-        </div>
 
         {% else %}
         <!-- Logged-in UI -->
