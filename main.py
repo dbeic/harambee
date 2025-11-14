@@ -2921,10 +2921,12 @@ base_html = """
                 <div class="site-title">HARAMBEE CASH</div>
                 <div class="tagline" style="font-size:0.85rem; margin-top:4px;">Play & Win Big with Golden Opportunities!</div>
             </div>
+        
             <div class="header-actions">
                 {% if session.get('user_id') %}
-                    <div class="wallet-badge">Ksh. {{ wallet_balance | default(0.0) | float |  round(2) }}</div>                       
-        </div>
+                    <div class="wallet-badge">Ksh. {{ wallet_balance | default(0.0) | float |  round(2) }}</div>
+        </div>                          
+    
     </header>
 
     <!-- Navigation -->
@@ -2991,7 +2993,9 @@ base_html = """
                 </ul>
             </div>
         </div>
-
+        
+        {% if not session.get('username') %}
+            <!-- Guest UI - login/register forms would be here -->
         {% else %}
         <!-- Logged-in UI -->
         <div style="text-align:center; margin-bottom:14px;">
