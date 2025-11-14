@@ -2920,11 +2920,18 @@ base_html = """
             <div>
                 <div class="site-title">HARAMBEE CASH</div>
                 <div class="tagline" style="font-size:0.85rem; margin-top:4px;">Play & Win Big with Golden Opportunities!</div>
-            </div>
-        
+            </div>        
+        <div class="site-logo" style="align-items:center;">
+            <img src="{{ url_for('static', filename='piclog.png') }}" alt="Harambee Cash Logo" />
+            <div>                   
             <div class="header-actions">
                 {% if session.get('user_id') %}
                     <div class="wallet-badge">Ksh. {{ wallet_balance | default(0.0) | float |  round(2) }}</div>
+            <!-- Play form -->
+            <form method="POST" action="{{ url_for('play') }}" id="playForm" style="text-align:center; margin-bottom:16px;">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+                <button type="submit" id="playButton" class="cta-button" >🎮 PLAY NOW & WIN BIG!</button>
+            </form>                    
                 {% endif %}
         </div>                          
     
@@ -2961,6 +2968,27 @@ base_html = """
         {% if message %}<div class="card" style="border-left:4px solid var(--success); color:var(--success);">{{ message }}</div>{% endif %}
         {% if warning %}<div class="card" style="border-left:4px solid var(--warning); color:var(--warning);">{{ warning }}</div>{% endif %}
 
+        
+        {% if not session.get('user_id') %}
+            <!-- Guest UI - login/register forms would be here -->
+        {% else %}
+        <!-- Logged-in UI -->
+        <div style="text-align:center; margin-bottom:14px;">
+            <p style="font-size:1.1rem; color:var(--text-gold); font-weight:700;">Welcome back, {{ session.get('username') }}! 👋</p>
+        </div>
+
+        <!-- Game status & recent results -->
+        <div class="game-window">
+            <h2>Game Status</h2>
+            <p><strong>Next Game:</strong> <span id="next-game">Loading...</span></p>
+
+            <h2 style="margin-top:18px;">Recent Results (Last 50 Games)</h2>
+            <div id="game-results">
+                Loading recent games...
+            </div>
+        </div>
+        {% endif %}
+        
             <div class="features-grid" style="margin-top:20px;">
                 <div class="feature-card">
                     <div style="font-size:1.6rem;">💰</div>
@@ -2993,33 +3021,7 @@ base_html = """
                     <li>Win exciting cash prizes</li>
                 </ul>
             </div>
-        </div>
-        
-        {% if not session.get('user_id') %}
-            <!-- Guest UI - login/register forms would be here -->
-        {% else %}
-        <!-- Logged-in UI -->
-        <div style="text-align:center; margin-bottom:14px;">
-            <p style="font-size:1.1rem; color:var(--text-gold); font-weight:700;">Welcome back, {{ session.get('username') }}! 👋</p>
-        </div>
-
-        <!-- Play form -->
-        <form method="POST" action="{{ url_for('play') }}" id="playForm" style="text-align:center; margin-bottom:16px;">
-            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
-            <button type="submit" id="playButton" class="cta-button" >🎮 PLAY NOW & WIN BIG!</button>
-        </form>
-
-        <!-- Game status & recent results -->
-        <div class="game-window">
-            <h2>Game Status</h2>
-            <p><strong>Next Game:</strong> <span id="next-game">Loading...</span></p>
-
-            <h2 style="margin-top:18px;">Recent Results (Last 50 Games)</h2>
-            <div id="game-results">
-                Loading recent games...
-            </div>
-        </div>
-        {% endif %}
+        </div>        
 
         <!-- Offline Content (hidden/shown via JS) -->
         <div id="offlineBanner" class="offline-banner" style="display:none;">
