@@ -1,3 +1,5 @@
+from dotenv import load_dotenv
+load_dotenv()
 import os
 import psycopg2
 from psycopg2 import errors
@@ -25,18 +27,9 @@ from flask import send_from_directory
 from flask_wtf.csrf import CSRFProtect
 from datetime import datetime, timedelta, timezone
 from game_worker import run_game
-from dotenv import load_dotenv
-load_dotenv()
-
-now = datetime.now()
-now_str = now.strftime("%Y-%m-%d %H:%M:%S")  # convert to string
-date_part = now_str.split(" ")[0]  # now you can safely split
-
-# --- Configuration & logging ---
-logging.basicConfig(level=logging.DEBUG, format="%(asctime)s - %(levelname)s - %(message)s")
 
 app = Flask(__name__)
-app.secret_key = os.getenv('SECRET_KEY', 'dev-key-change-in-production')
+app.secret_key = os.getenv('SECRET_KEY')
 app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(minutes=30)
 
 # Required environment vars
@@ -50,6 +43,12 @@ if not all([ADMIN_USERNAME, ADMIN_PASSWORD]):
 
 # CSRF protection
 csrf = CSRFProtect(app)
+
+def get_timestamp():
+    return datetime.now().strftime("%Y-%m-%d %H:%M:%S.%f")
+
+# --- Configuration & logging ---
+logging.basicConfig(level=logging.DEBUG, format="%(asctime)s - %(levelname)s - %(message)s")
 
 # Rate limiter that prefers logged-in user id, otherwise IP
 def rate_limit_key():
@@ -69,9 +68,6 @@ def hashed_password(password: str) -> str:
 
 def verify_password(stored_hash: str, password: str) -> bool:
     return check_password_hash(stored_hash, password.strip())
-
-def get_timestamp():
-    return datetime.now().strftime("%Y-%m-%d %H:%M:%S.%f")
 
 def generate_game_code():
     import string
@@ -4589,3 +4585,4 @@ def start_background_game_loop():
 # --- Run ---
 if __name__ == "__main__":
     app.run(debug=True, host="127.0.0.1", port=5000)
+è
