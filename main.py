@@ -1451,7 +1451,31 @@ def process_deposit():
     except Exception as e:
         conn.rollback()
         logging.error(f"Process deposit error: {e}")
-        return jsonify({"error": "System error"}), 500        
+        return jsonify({"error": "System error"}), 500
+        
+@app.route("/check-admin")
+def check_admin():
+    env_username = os.getenv('ADMIN_USERNAME')
+    env_password = os.getenv('ADMIN_PASSWORD')
+    
+    with get_db_connection() as conn:
+        cursor = conn.cursor()
+        cursor.execute("SELECT username, hashed_password FROM admins WHERE username = %s", (env_username,))
+        admin = cursor.fetchone()
+        
+        if admin:
+            db_username, db_hashed = admin
+            password_correct = check_password_hash(db_hashed, env_password)
+            return f"""
+            .env Username: '{env_username}'<br>
+            .env Password: '{env_password}'<br>
+            DB Username: '{db_username}'<br>
+            Password Match: {password_correct}<br>
+            Try logging in with: '{env_username}' / '{env_password}'
+            """
+        else:
+            return f"No admin found with username: '{env_username}'"
+                  
         
 #NON MONETARY ADMIN FUNCTIONS
 ###################
