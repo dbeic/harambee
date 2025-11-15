@@ -25,8 +25,6 @@ from flask import send_from_directory
 from flask_wtf.csrf import CSRFProtect
 from datetime import datetime, timedelta, timezone
 from game_worker import run_game
-from dotenv import load_dotenv
-load_dotenv()
 
 now = datetime.now()
 now_str = now.strftime("%Y-%m-%d %H:%M:%S")  # convert to string
