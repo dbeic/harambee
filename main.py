@@ -2941,15 +2941,14 @@ base_html = """
             <div class="header-actions">
                 {% if session.get('user_id') %}
                     <div class="wallet-badge">Ksh. {{ wallet_balance | default(0.0) | float |  round(2) }}</div>
-                <!-- Play form -->                    
-                    <button type="submit"                
+                    <!-- Play form -->                    
                     <form method="POST" action="{{ url_for('play') }}" id="playForm" style="text-align:center; margin-bottom:16px;">
                         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
                         <button type="submit" id="playButton" class="cta-button">🎮 PLAY NOW & WIN BIG!</button>
                     </form>                                         
                 {% endif %}
+            </div>
         </div>                          
-    
     </header>
 
     <!-- Navigation -->
@@ -2998,7 +2997,7 @@ base_html = """
                     <li>Win exciting cash prizes</li>
                 </ul>
             </div>
-           <div class="features-grid" style="margin-top:20px;">
+            <div class="features-grid" style="margin-top:20px;">
                 <div class="feature-card">
                     <div style="font-size:1.6rem;">💰</div>
                     <div style="font-weight:700; margin-top:8px; color:var(--text-gold);">Win Real Cash</div>
@@ -3020,23 +3019,22 @@ base_html = """
                     <div style="color:var(--text-muted); margin-top:6px;">Join thousands of players winning together</div>
                 </div>
             </div>
-        </div>                                    
         {% else %}
-        <!-- Logged-in UI -->
-        <div style="text-align:center; margin-bottom:14px;">
-            <p style="font-size:1.1rem; color:var(--text-gold); font-weight:700;">Welcome back, {{ session.get('username') }}! 👋</p>
-        </div>
-
-        <!-- Game status & recent results -->
-        <div class="game-window">
-            <h2>Game Status</h2>
-            <p><strong>Next Game:</strong> <span id="next-game">Loading...</span></p>
-
-            <h2 style="margin-top:18px;">Recent Results (Last 50 Games)</h2>
-            <div id="game-results">
-                Loading recent games...
+            <!-- Logged-in UI -->
+            <div style="text-align:center; margin-bottom:14px;">
+                <p style="font-size:1.1rem; color:var(--text-gold); font-weight:700;">Welcome back, {{ session.get('username') }}! 👋</p>
             </div>
-        </div>
+
+            <!-- Game status & recent results -->
+            <div class="game-window">
+                <h2>Game Status</h2>
+                <p><strong>Next Game:</strong> <span id="next-game">Loading...</span></p>
+
+                <h2 style="margin-top:18px;">Recent Results (Last 50 Games)</h2>
+                <div id="game-results">
+                    Loading recent games...
+                </div>
+            </div>
         {% endif %}        
 
         <!-- Offline Content (hidden/shown via JS) -->
@@ -3059,7 +3057,6 @@ base_html = """
                 <div id="offlineContent" style="margin-top:14px;"></div>
             </div>
         </div>
-
     </div> <!-- /.container -->
 
     <!-- Footer -->
@@ -3089,6 +3086,7 @@ base_html = """
     <!-- Install button for PWA -->
     <button id="install-btn" class="cta-button" style="position:fixed; top:20px; right:20px; display:none; z-index:1000;">📱 Install App</button>
 
+    <script>
         class UltimatePlayExperience {
             constructor() {
                 this.isSubmitting = false;
@@ -3096,18 +3094,18 @@ base_html = """
             }
 
             init() {
-                const form = document. getElementById('playForm');
-                const button = document. getElementById('playButton');
+                const form = document.getElementById('playForm');
+                const button = document.getElementById('playButton');
         
                 if (!form || !button) {
-                    console.error('Play form or  button not found!');
+                    console.error('Play form or button not found!');
                     return;
                 }
 
-                // Replace form submission with         AJAX for better UX
+                // Replace form submission with AJAX for better UX
                 form.addEventListener('submit', async (e) => {
                     e.preventDefault();
-                    await this. handlePlaySubmission();
+                    await this.handlePlaySubmission();
                 });
             }
 
@@ -3146,13 +3144,13 @@ base_html = """
                     }
             
                 } catch (error) {
-                    this.handleError('Network error.         Please check your connection.');
+                    this.handleError('Network error. Please check your connection.');
                 } finally {
                     this.isSubmitting = false;
                     button.disabled = false;
                     button.innerHTML = originalText;
                 }
-           }
+            }
 
             async handleSuccess(data) {
                 // Update wallet balance display
@@ -3162,7 +3160,7 @@ base_html = """
                 }
         
                 // Show epic success animation
-                await this. showEpicSuccessAnimation();
+                await this.showEpicSuccessAnimation();
         
                 // Show success message
                 this.showFloatingMessage(data.message, 'success');
@@ -3262,7 +3260,7 @@ base_html = """
                     position: fixed;
                     top: 20px;
                     right: 20px;
-                    background: ${type === 'success' ? 'linear-gradient(135deg, #00C9B1, #00A896)' : 'linear- gradient(135deg, #FF6B35, #E63946)'};
+                    background: ${type === 'success' ? 'linear-gradient(135deg, #00C9B1, #00A896)' : 'linear-gradient(135deg, #FF6B35, #E63946)'};
                     color: white;
                     padding: 15px 20px;
                     border-radius: 10px;
@@ -3352,7 +3350,7 @@ base_html = """
         }
 
         // Add CSS animations
-const style = document. createElement('style');
+        const style = document.createElement('style');
         style.textContent = `
             @keyframes rocketLaunch {
                 0% { transform: translateX(-50%) translateY(0) scale(1); opacity: 1; }
@@ -3373,10 +3371,10 @@ const style = document. createElement('style');
             @keyframes popOut {
                 0% { transform: translate(-50%, -50%) scale(1); opacity: 1; }
                 100% { transform: translate(-50%, -50%) scale(0); opacity: 0; }
-    }
+            }
     
             @keyframes slideInRight {
-                0% { transform: translateX(100%);         opacity: 0; }
+                0% { transform: translateX(100%); opacity: 0; }
                 100% { transform: translateX(0); opacity: 1; }
             }
 
@@ -3388,7 +3386,7 @@ const style = document. createElement('style');
         document.head.appendChild(style);
 
         // Initialize the ultimate play experience
-document. addEventListener('DOMContentLoaded', function() {
+        document.addEventListener('DOMContentLoaded', function() {
             new UltimatePlayExperience();
             console.log('🎮 Ultimate Play Experience Activated!');
         });
