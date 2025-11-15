@@ -26,7 +26,6 @@ from flask_wtf.csrf import CSRFProtect
 from datetime import datetime, timedelta, timezone
 from game_worker import run_game
 from dotenv import load_dotenv
-
 load_dotenv()
 
 now = datetime.now()
@@ -259,15 +258,25 @@ def init_db():
         cursor.execute("CREATE INDEX IF NOT EXISTS idx_transactions_user_id ON transactions(user_id)")
         cursor.execute("CREATE INDEX IF NOT EXISTS idx_results_status ON results(status)")
         cursor.execute("CREATE INDEX IF NOT EXISTS idx_withdrawal_requests_user_id ON withdrawal_requests(user_id)")
-        cursor.execute("CREATE INDEX IF NOT EXISTS idx_deposit_requests_user_id ON deposit_requests(user_id)")        
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_deposit_requests_user_id ON deposit_requests(user_id)")                                                  # ADMIN SETUP - Use .env credentials
+        env_username = os.getenv('ADMIN_USERNAME')
+        env_password = os.getenv('ADMIN_PASSWORD')
         
-        cursor.execute("SELECT id FROM admins WHERE username = %s LIMIT 1", (ADMIN_USERNAME,))
-        exists = cursor.fetchone()
-        if not exists:
-            hashed = hashed_password(ADMIN_PASSWORD)
-            cursor.execute("INSERT INTO admins (username, hashed_password) VALUES (%s, %s)", (ADMIN_USERNAME, hashed))
-            conn.commit()
-            print('Admin created successfully')
+        cursor.execute("SELECT id, hashed_password FROM admins WHERE username = %s", (env_username,))
+        existing_admin = cursor.fetchone()
+        
+        if existing_admin:
+            # Update existing admin password to match .env
+            hashed = generate_password_hash(env_password)
+            cursor.execute("UPDATE admins SET hashed_password = %s WHERE username = %s", (hashed, env_username))
+            print(f'Admin password updated for: {env_username}')
+        else:
+            # Create new admin with .env credentials
+            hashed = generate_password_hash(env_password)
+            cursor.execute("INSERT INTO admins (username, hashed_password) VALUES (%s, %s)", (env_username, hashed))
+            print(f'Admin created: {env_username}')
+        
+        conn.commit()
 
 init_db()
 
