@@ -690,11 +690,13 @@ def game_data():
 
 @app.route("/play", methods=["POST"])
 @login_required()
-@limiter.limit("5 per minute")
+@limiter.limit("10 per minute")  # More generous limit
 def play():
     user_id = session.get("user_id")
+    username = session.get("username")
+    
     if not user_id:
-        return redirect(url_for("index", error="You must be logged in to play."))
+        return jsonify({"success": False, "error": "You must be logged in to play."})
 
     try:
         with get_db_connection() as conn:
@@ -703,21 +705,29 @@ def play():
             # Check if user already in queue
             cursor.execute("SELECT 1 FROM game_queue WHERE user_id = %s", (user_id,))
             if cursor.fetchone():
-                return redirect(url_for("index", message="Already enrolled in current game"))
+                return jsonify({"success": False, "error": "Already enrolled in current game!"})
 
-            # Deduct atomically if enough balance
+            # Check current balance
+            cursor.execute("SELECT wallet FROM users WHERE id = %s", (user_id,))
+            result = cursor.fetchone()
+            current_balance = float(result[0]) if result and result[0] else 0.0
+            
+            if current_balance < 1.0:
+                return jsonify({"success": False, "error": f"Insufficient funds! Your balance: Ksh. {current_balance:.2f}"})
+
+            # Deduct play amount atomically
             cursor.execute("""
-                UPDATE users
-                SET wallet = wallet - 1.0
+                UPDATE users 
+                SET wallet = wallet - 1.0 
                 WHERE id = %s AND wallet >= 1.0
+                RETURNING wallet
             """, (user_id,))
+            
+            updated = cursor.fetchone()
+            if not updated:
+                return jsonify({"success": False, "error": "Transaction failed. Please try again."})
 
-            if cursor.rowcount == 0:
-                cursor.execute("SELECT wallet FROM users WHERE id = %s", (user_id,))
-                balance = cursor.fetchone()[0] or 0.0
-                return redirect(url_for("index", error=f"Insufficient funds. Balance: Ksh. {balance:.2f}"))
-
-            # Record the transaction
+            # Record transaction
             cursor.execute("""
                 INSERT INTO transactions (user_id, type, amount, timestamp)
                 VALUES (%s, 'game_entry', %s, %s)
@@ -729,18 +739,25 @@ def play():
                 VALUES (%s, %s)
             """, (user_id, get_timestamp()))
 
+            # Get updated balance
+            new_balance = float(updated[0])
+            
             conn.commit()
 
-        return redirect(url_for("index", message="Successfully enrolled in the next game!"))
+            # Log successful play
+            logging.info(f"User {username} successfully enrolled in game. New balance: Ksh. {new_balance:.2f}")
+
+            return jsonify({
+                "success": True, 
+                "message": "🎉 Successfully enrolled in the next game!",
+                "new_balance": new_balance
+            })
 
     except psycopg2.IntegrityError:
-        return redirect(url_for("index", message="Already enrolled in current game"))
-    except psycopg2.Error as e:
-        logging.error(f"Database error during enrollment: {e}")
-        return redirect(url_for("index", error="Database error. Please try again."))
+        return jsonify({"success": False, "error": "Already enrolled in current game!"})
     except Exception as e:
-        logging.error(f"Unexpected error: {e}")
-        return redirect(url_for("index", error="Unexpected error occurred."))
+        logging.error(f"Play error for user {username}: {str(e)}")
+        return jsonify({"success": False, "error": "System error. Please try again."})
 
 @app.route("/admin/add_allowed_user", methods=["POST"])
 @login_required(role='admin')
@@ -2924,11 +2941,12 @@ base_html = """
             <div class="header-actions">
                 {% if session.get('user_id') %}
                     <div class="wallet-badge">Ksh. {{ wallet_balance | default(0.0) | float |  round(2) }}</div>
-                <!-- Play form -->
-                <form method="POST" action="{{ url_for('play') }}" id="playForm" style="text-align:center; margin-bottom:16px;">
-                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
-                    <button type="submit" id="playButton" class="cta-button" >🎮 PLAY NOW & WIN BIG!</button>
-                </form>                    
+                <!-- Play form -->                    
+                    <button type="submit"                
+                    <form method="POST" action="{{ url_for('play') }}" id="playForm" style="text-align:center; margin-bottom:16px;">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+                        <button type="submit" id="playButton" class="cta-button">🎮 PLAY NOW & WIN BIG!</button>
+                    </form>                                         
                 {% endif %}
         </div>                          
     
@@ -3068,332 +3086,312 @@ base_html = """
     </div>
 
     <!-- Game Animation Overlay -->
-    <div id="gameAnimation" class="game-animation" aria-hidden="true">
-        <div class="animation-content">
-            <div class="animated-image" id="animatedImage">🎮</div>
-            <div class="animation-text" id="animationText"></div>
-        </div>
-    </div>
-
     <!-- Install button for PWA -->
     <button id="install-btn" class="cta-button" style="position:fixed; top:20px; right:20px; display:none; z-index:1000;">📱 Install App</button>
 
-    <!-- Inline JavaScript (merged, cleaned, single SubmissionProtector class) -->
-    <script>
-        // Clear any previous submission state when this page loads (fresh)
-        try { sessionStorage.removeItem('harambeeSubmissionState'); } catch (e) {}
-
-        //////////////////////////////
-        // Submission Protection
-        //////////////////////////////
-        class SubmissionProtector {
+        class UltimatePlayExperience {
             constructor() {
                 this.isSubmitting = false;
-                this.submissionTimeout = null;
-                this.userEnrolled = false;
-                this.currentGame = null;
-                this.audioEnabled = false;
+                this.init();
             }
 
-            initialize() {
-                this.loadSubmissionState();
-                this.setupFormProtection();
-                this.setupBeforeUnload();
-                this.setupAudioPermission();
-            }
-
-            setupAudioPermission() {
-                document.addEventListener('click', () => {
-                    this.audioEnabled = true;
-                }, { once: false });
-            }
-
-            loadSubmissionState() {
-                const savedState = sessionStorage.getItem('harambeeSubmissionState');
-                if (!savedState) return;
-
-                try {
-                    const state = JSON.parse(savedState);
-                    this.isSubmitting = !!state.isSubmitting;
-                    this.userEnrolled = !!state.userEnrolled;
-
-                    if (this.isSubmitting) {
-                        this.disablePlayButton('⏳ Processing...');
-                    } else if (this.userEnrolled) {
-                        this.showEnrollmentStatus('✅ Already enrolled in current game');
-                        this.disablePlayButton('✅ Already Enrolled');
-                    }
-                } catch (e) {
-                    console.error('Error loading submission state:', e);
-                    this.resetState();
+            init() {
+                const form = document. getElementById('playForm');
+                const button = document. getElementById('playButton');
+        
+                if (!form || !button) {
+                    console.error('Play form or  button not found!');
+                    return;
                 }
-            }
 
-            saveSubmissionState() {
-                const state = {
-                    isSubmitting: this.isSubmitting,
-                    userEnrolled: this.userEnrolled,
-                    timestamp: Date.now()
-                };
-                try { sessionStorage.setItem('harambeeSubmissionState', JSON.stringify(state)); } catch (e) { console.error(e); }
-            }
-
-            setupFormProtection() {
-                const form = document.getElementById('playForm');
-                const button = document.getElementById('playButton');
-                if (!form || !button) return;
-
-                form.addEventListener('submit', (e) => {
-                    if (this.isSubmitting || this.userEnrolled) {
-                        e.preventDefault();
-                        e.stopImmediatePropagation();
-                        return false;
-                    }
-                    return this.handleFormSubmission();
-                });
-
-                // Defensive click handler
-                button.addEventListener('click', (e) => {
-                    if (this.isSubmitting || this.userEnrolled) {
-                        e.preventDefault();
-                        e.stopImmediatePropagation();
-                        return false;
-                    }
-                }, true);
-            }
-
-            setupBeforeUnload() {
-                window.addEventListener('beforeunload', (e) => {
-                    if (!this.isSubmitting) return;
+                // Replace form submission with         AJAX for better UX
+                form.addEventListener('submit', async (e) => {
                     e.preventDefault();
-                    e.returnValue = 'Your game enrollment is being processed. Are you sure you want to leave?';
-                    return e.returnValue;
+                    await this. handlePlaySubmission();
                 });
             }
 
-            handleFormSubmission() {
-                if (this.isSubmitting || this.userEnrolled) {
-                    return false;
-                }
-
-                this.isSubmitting = true;
-                this.disablePlayButton('⏳ Processing...');
-                this.saveSubmissionState();
-
-                this.submissionTimeout = setTimeout(() => {
-                    if (!this.isSubmitting) return;
-                    this.isSubmitting = false;
-                    this.enablePlayButton();
-                    this.saveSubmissionState();
-                    this.showTemporaryMessage('Submission timeout. Please try again.', 'warning');
-                }, 10000);
-
-                return true;
-            }
-
-            handleSubmissionSuccess(message = '✅ Successfully enrolled in the next game!') {
-                clearTimeout(this.submissionTimeout);
-                this.isSubmitting = false;
-                this.userEnrolled = true;
-
-                this.showEnrollmentStatus(message);
-                this.disablePlayButton('✅ Already Enrolled');
-                this.saveSubmissionState();
-
-                if (this.audioEnabled) this.playSuccessSound();
-
-                setTimeout(() => {
-                    this.userEnrolled = false;
-                    this.enablePlayButton();
-                    this.hideEnrollmentStatus();
-                    this.saveSubmissionState();
-                }, 35000);
-            }
-
-            handleSubmissionError() {
-                clearTimeout(this.submissionTimeout);
-                this.isSubmitting = false;
-                this.enablePlayButton();
-                this.saveSubmissionState();
-            }
-
-            playSuccessSound() {
+            async handlePlaySubmission() {
+                if (this.isSubmitting) return;
+        
+                const button = document.getElementById('playButton');
+                const originalText = button.innerHTML;
+        
                 try {
-                    const context = new (window.AudioContext || window.webkitAudioContext)();
-                    const oscillator = context.createOscillator();
-                    const gainNode = context.createGain();
-                    oscillator.connect(gainNode);
-                    gainNode.connect(context.destination);
-                    oscillator.frequency.value = 800;
-                    oscillator.type = 'sine';
-                    gainNode.gain.setValueAtTime(0.3, context.currentTime);
-                    gainNode.gain.exponentialRampToValueAtTime(0.01, context.currentTime + 0.5);
-                    oscillator.start(context.currentTime);
-                    oscillator.stop(context.currentTime + 0.5);
-                } catch (err) {
-                    console.log('Web Audio API not supported', err);
+                    this.isSubmitting = true;
+                    button.disabled = true;
+                    button.innerHTML = '🚀 LAUNCHING...';
+            
+                    // Show immediate visual feedback
+                    this.showLaunchAnimation();
+            
+                    // Perform AJAX request
+                    const response = await fetch('/play', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/x-www-form-urlencoded',
+                            'X-Requested-With': 'XMLHttpRequest'
+                        },
+                        body: new URLSearchParams({
+                            'csrf_token': document.querySelector('input[name="csrf_token"]').value
+                        })
+                    });
+            
+                    const data = await response.json();
+            
+                    if (data.success) {
+                        await this.handleSuccess(data);
+                    } else {
+                        this.handleError(data.error);
+                    }
+            
+                } catch (error) {
+                    this.handleError('Network error.         Please check your connection.');
+                } finally {
+                    this.isSubmitting = false;
+                    button.disabled = false;
+                    button.innerHTML = originalText;
                 }
-            }
+           }
 
-            disablePlayButton(text = '⏳ Processing...') {
-                const button = document.getElementById('playButton');
-                if (!button) return;
-                button.disabled = true;
-                button.innerHTML = `<span style="display:inline-block; vertical-align:middle; margin-right:8px;">⏳</span>${text}`;
-            }
-
-            enablePlayButton() {
-                const button = document.getElementById('playButton');
-                if (!button) return;
-                button.disabled = false;
-                button.innerHTML = '🎮 PLAY NOW & WIN BIG!';
-            }
-
-            showEnrollmentStatus(message) {
-                const statusDiv = document.getElementById('enrollmentStatus');
-                const statusText = document.getElementById('statusText');
-                if (!statusDiv || !statusText) return;
-                statusText.textContent = message;
-                statusDiv.style.display = 'block';
-            }
-
-            hideEnrollmentStatus() {
-                const statusDiv = document.getElementById('enrollmentStatus');
-                if (!statusDiv) return;
-                statusDiv.style.display = 'none';
-            }
-
-            showTemporaryMessage(message, type = 'error') {
-                const container = document.querySelector('.container');
-                if (!container) return;
-                const messageDiv = document.createElement('div');
-                messageDiv.className = 'card';
-                messageDiv.style.borderLeft = (type === 'warning' ? '4px solid var(--warning)' : type === 'success' ? '4px solid var(--success)' : '4px solid var(--error)');
-                messageDiv.style.color = (type === 'warning' ? 'var(--warning)' : type === 'success' ? 'var(--success)' : 'var(--error)');
-                messageDiv.style.marginBottom = '12px';
-                messageDiv.textContent = message;
-                container.insertBefore(messageDiv, container.firstChild);
-                setTimeout(() => {
-                    if (messageDiv.parentNode) messageDiv.parentNode.removeChild(messageDiv);
-                }, 5000);
-            }
-
-            resetState() {
-                this.isSubmitting = false;
-                this.userEnrolled = false;
-                clearTimeout(this.submissionTimeout);
-                this.enablePlayButton();
-                this.hideEnrollmentStatus();
-                try { sessionStorage.removeItem('harambeeSubmissionState'); } catch(e){}
-            }
-        }
-
-        //////////////////////////////
-        // Game Animator
-        //////////////////////////////
-        class GameAnimator {
-            constructor() {
-                this.animation = document.getElementById('gameAnimation');
-                this.animatedImage = document.getElementById('animatedImage');
-                this.animationText = document.getElementById('animationText');
-                this.lastGameStatus = null;
-                this.animationActive = false;
-            }
-
-            async playGameStart(gameCode) {
-                if (this.animationActive) return;
-                this.animationActive = true;
-                this.animatedImage.innerHTML = '🚀';
-                this.animationText.textContent = `GAME ${gameCode} STARTED!`;
-                this.animation.style.display = 'flex';
-                this.createRocketEffect();
-                setTimeout(() => this.hideAnimation(), 3000);
-            }
-
-            async playGameEnd(gameCode, winner, amount) {
-                if (this.animationActive) return;
-                this.animationActive = true;
-                this.animatedImage.innerHTML = '🎉';
-                this.animationText.textContent = `WINNER: ${winner} 🏆 ${amount}`;
-                this.animation.style.display = 'flex';
-                this.createConfettiEffect();
-                setTimeout(() => {
-                    this.hideAnimation();
-                    if (window.submissionProtector) window.submissionProtector.resetState();
-                }, 4000);
-            }
-
-            createRocketEffect() {
-                for (let i = 0; i < 3; i++) {
-                    setTimeout(() => {
-                        const rocket = document.createElement('div');
-                        rocket.className = 'rocket';
-                        rocket.innerHTML = '🚀';
-                        rocket.style.left = `${10 + i * 20}%`;
-                        rocket.style.top = '80%';
-                        this.animation.appendChild(rocket);
-
-                        setTimeout(() => {
-                            if (rocket.parentNode) rocket.parentNode.removeChild(rocket);
-                        }, 2000);
-                    }, i * 300);
+            async handleSuccess(data) {
+                // Update wallet balance display
+                const walletBadge = document.querySelector('.wallet-badge');
+                if (walletBadge && data.new_balance !== undefined) {
+                    walletBadge.textContent = `Ksh. ${data.new_balance.toFixed(2)}`;
                 }
+        
+                // Show epic success animation
+                await this. showEpicSuccessAnimation();
+        
+                // Show success message
+                this.showFloatingMessage(data.message, 'success');
+        
+                // Play victory sound
+                this.playVictorySound();
+        
+                // Update game data
+                setTimeout(() => this.fetchGameData(), 1000);
             }
 
-            createConfettiEffect() {
-                const colors = ['#FF6B35', '#00C9B1', '#FFD166', '#4ECDC4', '#FFE66D'];
+            handleError(error) {
+                this.showFloatingMessage(error, 'error');
+                this.playErrorSound();
+            }
+
+            showLaunchAnimation() {
+                const rocket = document.createElement('div');
+                rocket.innerHTML = '🚀';
+                rocket.style.cssText = `
+                    position: fixed;
+                    bottom: 20px;
+                    left: 50%;
+                    transform: translateX(-50%);
+                    font-size: 4rem;
+                    z-index: 10000;
+                    animation: rocketLaunch 2s ease-out forwards;
+                `;
+
+                document.body.appendChild(rocket);
+                setTimeout(() => rocket.remove(), 2000);
+            }
+
+            async showEpicSuccessAnimation() {
+                // Create confetti explosion
+                this.createConfetti();
+        
+                // Show success message with flair
+                const successDiv = document.createElement('div');
+                successDiv.innerHTML = `
+                    <div style="
+                        position: fixed;
+                        top: 50%;
+                        left: 50%;
+                        transform: translate(-50%, -50%);
+                        background: linear-gradient(135deg, #FFD700, #D4AF37);
+                        color: #000;
+                        padding: 30px 40px;
+                        border-radius: 20px;
+                        font-size: 1.5rem;
+                        font-weight: bold;
+                        text-align: center;
+                        z-index: 10001;
+                        box-shadow: 0 0 50px rgba(255, 215, 0, 0.8);
+                        animation: popIn 0.5s ease-out;
+                    ">
+                        <div style="font-size: 3rem; margin-bottom: 10px;">🎉</div>
+                        ENROLLED SUCCESSFULLY!
+                        <div style="font-size: 1rem; margin-top: 10px;">Get ready to win big! 🚀</div>
+                    </div>
+                `;
+        
+                document.body.appendChild(successDiv);
+        
+                // Remove after 3 seconds
+                setTimeout(() => {
+                    successDiv.style.animation = 'popOut 0.5s ease-in forwards';
+                    setTimeout(() => successDiv.remove(), 500);
+                }, 3000);
+            }
+
+            createConfetti() {
+                const colors = ['#FFD700',  '#D4AF37', '#FF6B35', '#00C9B1', '#FFD166'];
                 for (let i = 0; i < 50; i++) {
                     setTimeout(() => {
                         const confetti = document.createElement('div');
-                        confetti.className = 'confetti';
-                        confetti.style.left = `${Math.random() * 100}%`;
-                        confetti.style.top = `${Math.random() * 60 + 20}%`;
-                        confetti.style.background = colors[Math.floor(Math.random() * colors.length)];
-                        confetti.style.width = '10px';
-                        confetti.style.height = '10px';
-                        confetti.style.animationDelay = `${Math.random() * 2}s`;
-                        this.animation.appendChild(confetti);
-
-                        setTimeout(() => {
-                            if (confetti.parentNode) confetti.parentNode.removeChild(confetti);
-                        }, 3000);
-                    }, i * 50);
+                        confetti.innerHTML = ['🎉', '🎊', '⭐', '💫', '✨'][Math.floor(Math.random() * 5)];
+                        confetti.style.cssText = `
+                            position: fixed;
+                            top: 100%;
+                            left: ${Math.random() * 100}%;
+                            font-size: ${Math.random() * 20 + 10}px;
+                            z-index: 10000;
+                            animation: confettiFall ${Math.random() * 3 + 2}s linear forwards;
+                         `;
+                
+                        document.body.appendChild(confetti);
+                        setTimeout(() => confetti.remove(), 5000);
+                    }, i * 100);
                 }
             }
 
-            hideAnimation() {
-                if (this.animation) this.animation.style.display = 'none';
-                const effects = this.animation.querySelectorAll('.confetti, .rocket');
-                effects.forEach(effect => { if (effect.parentNode) effect.parentNode.removeChild(effect); });
-                this.animationActive = false;
+            showFloatingMessage(message, type) {
+                const messageDiv = document.createElement('div');
+                messageDiv.textContent = message;
+                messageDiv.style.cssText = `
+                    position: fixed;
+                    top: 20px;
+                    right: 20px;
+                    background: ${type === 'success' ? 'linear-gradient(135deg, #00C9B1, #00A896)' : 'linear- gradient(135deg, #FF6B35, #E63946)'};
+                    color: white;
+                    padding: 15px 20px;
+                    border-radius: 10px;
+                    font-weight: bold;
+                    z-index: 10002;
+                    animation: slideInRight 0.5s ease-out;
+                    box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+                `;
+        
+                document.body.appendChild(messageDiv);
+        
+                setTimeout(() => {
+                    messageDiv.style.animation = 'slideOutRight 0.5s ease-in forwards';
+                    setTimeout(() => messageDiv.remove(), 500);
+                }, 4000);
             }
 
-            monitorGameStatus() {
-                setInterval(() => {
-                    if (!navigator.onLine) return;
-                    fetch('/game_data')
-                        .then(response => {
-                            if (!response.ok) throw new Error('Network error');
-                            return response.json();
-                        })
-                        .then(data => {
-                            const currentGame = data.in_progress_game;
-                            if (!currentGame) return;
+            playVictorySound() {
+                try {
+                    const context = new (window.AudioContext || window.webkitAudioContext)();
+                    const oscillator = context.createOscillator();
+                    const gain = context.createGain();
+            
+                    oscillator.connect(gain);
+                    gain.connect(context.destination);
+            
+                    // Victory fanfare
+                    oscillator.frequency.setValueAtTime(523.25, context.currentTime); // C5
+                    oscillator.frequency.setValueAtTime(659.25, context.currentTime + 0.1); // E5
+                    oscillator.frequency.setValueAtTime(783.99, context.currentTime + 0.2); // G5
+                    oscillator.frequency.setValueAtTime(1046.50, context.currentTime + 0.3); // C6
+            
+                    oscillator.type = 'sine';
+                    gain.gain.setValueAtTime(0.1, context.currentTime);
+                    gain.gain.exponentialRampToValueAtTime(0.01, context.currentTime + 0.5);
+            
+                    oscillator.start();
+                    oscillator.stop(context.currentTime + 0.5);
+                } catch (e) {
+                    // Audio not supported - silent fail
+                }
+            }
 
-                            if (currentGame.status === 'in progress' && (!this.lastGameStatus || this.lastGameStatus.status !== 'in progress')) {
-                                this.playGameStart(currentGame.game_code);
-                            }
+            playErrorSound() {
+                try {
+                    const context = new (window.AudioContext || window.webkitAudioContext)();
+                    const oscillator = context.createOscillator();
+                    const gain = context.createGain();
+            
+                    oscillator.connect(gain);
+                    gain.connect(context.destination);
+            
+                    oscillator.frequency.setValueAtTime(200, context.currentTime);
+                    oscillator.type = 'sawtooth';
+                    gain.gain.setValueAtTime(0.1, context.currentTime);
+                    gain.gain.exponentialRampToValueAtTime(0.01, context.currentTime + 0.3);
+            
+                    oscillator.start();
+                    oscillator.stop(context.currentTime + 0.3);
+                } catch (e) {
+                    // Audio not supported
+                }
+            }
 
-                            if (currentGame.status === 'completed' && this.lastGameStatus && this.lastGameStatus.status === 'in progress') {
-                                this.playGameEnd(currentGame.game_code, currentGame.winner, currentGame.winner_amount);
-                            }
+            async fetchGameData() {
+                try {
+                    const response = await fetch('/game_data');
+                    const data = await response.json();
+            
+                    // Update queue status if needed
+                    if (data.current_user_queued) {
+                        this.updateQueueStatus();
+                    }
+                } catch (error) {
+                    console.error('Failed to fetch game data:', error);
+                }
+            }
 
-                            this.lastGameStatus = { ...currentGame };
-                        })
-                        .catch(err => console.error('Error monitoring game status:', err));
-                }, 2000);
+            updateQueueStatus() {
+                const button = document.getElementById('playButton');
+                if (button) {
+                    button.innerHTML = '✅ ENROLLED!';
+                    button.disabled = true;
+                    button.style.background = 'linear-gradient(135deg, #00C9B1, #00A896)';
+                }
             }
         }
+
+        // Add CSS animations
+const style = document. createElement('style');
+        style.textContent = `
+            @keyframes rocketLaunch {
+                0% { transform: translateX(-50%) translateY(0) scale(1); opacity: 1; }
+                100% { transform: translateX(-50%) translateY(-100vh) scale(0.5); opacity: 0; }
+            }
+    
+            @keyframes confettiFall {
+                0% { transform: translateY(0) rotate(0deg); opacity: 1; }
+                100% { transform: translateY(-100vh) rotate(360deg); opacity: 0; }
+            }
+    
+            @keyframes popIn {
+                0% { transform: translate(-50%, -50%) scale(0); opacity: 0; }
+                80% { transform: translate(-50%, -50%) scale(1.1); opacity: 1; }
+                100% { transform: translate(-50%, -50%) scale(1); opacity: 1; }
+            }
+    
+            @keyframes popOut {
+                0% { transform: translate(-50%, -50%) scale(1); opacity: 1; }
+                100% { transform: translate(-50%, -50%) scale(0); opacity: 0; }
+    }
+    
+            @keyframes slideInRight {
+                0% { transform: translateX(100%);         opacity: 0; }
+                100% { transform: translateX(0); opacity: 1; }
+            }
+
+            @keyframes slideOutRight {
+                0% { transform: translateX(0); opacity: 1; }
+                100% { transform: translateX(100%); opacity: 0; }
+            }
+        `;
+        document.head.appendChild(style);
+
+        // Initialize the ultimate play experience
+document. addEventListener('DOMContentLoaded', function() {
+            new UltimatePlayExperience();
+            console.log('🎮 Ultimate Play Experience Activated!');
+        });
 
         //////////////////////////////
         // Offline features (trivia, achievements)
