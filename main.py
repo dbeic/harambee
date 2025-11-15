@@ -3923,7 +3923,7 @@ admin_login_html = """
         <h1>Admin Login</h1>  
         {% if error %} <p class="error">{{ error }}</p> {% endif %}  
         <form method="POST" action="/admin/login" id="adminLoginForm" autocomplete="on">  
-            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <label for="adminUsername">Username:</label>  
             <input type="text" id="adminUsername" name="username" required autocomplete="username" placeholder="Admin username">  
             <label for="adminPassword">Password:</label>  
