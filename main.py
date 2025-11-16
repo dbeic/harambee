@@ -40,7 +40,6 @@ app.secret_key = os.getenv('SECRET_KEY', 'dev-key-change-in-production')
 app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(minutes=30)
 
 # Required environment vars
-DATABASE_URL = os.getenv('DATABASE_URL')
 ADMIN_DATABASE = os.getenv('ADMIN_DATABASE')
 ADMIN_USERNAME = os.getenv('ADMIN_USERNAME')
 ADMIN_PASSWORD = os.getenv('ADMIN_PASSWORD')
