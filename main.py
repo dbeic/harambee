@@ -267,7 +267,6 @@ def init_db():
             conn.commit()
             print('Admin created successfully')
             print(ADMIN_USERNAME, ADMIN_PASSWORD)
-            print(SECRET_KEY)
 
 
 init_db()
