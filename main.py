@@ -414,29 +414,7 @@ def index():
     return render_template_string(base_html, 
                                 wallet_balance=wallet_balance,
                                 session=session)
-
-@app.route("/admin/login", methods=["GET", "POST"])
-@limiter.limit("5 per minute")
-def admin_login():
-    if request.method == "POST":
-        username = request.form.get("username")
-        password = request.form.get("password")
-
-        with get_db_connection() as conn:
-            cursor = conn.cursor()
-            cursor.execute("SELECT id, hashed_password FROM admins WHERE username = %s", (username,))
-            admin = cursor.fetchone()
-
-            if admin and verify_password(admin[1], password):
-                session["admin_id"] = admin[0]
-                session["is_admin"] = True
-                response = redirect(url_for("admin_dashboard"))
-                response.headers['X-Frame-Options'] = 'SAMEORIGIN'
-                return response
-            else:
-                return render_template_string(admin_login_html, error="Invalid admin credentials.")
-
-    return render_template_string(admin_login_html, error=None)                
+              
                 
 @app.route("/login", methods=["GET", "POST"])
 @limiter.limit("5 per minute")
@@ -515,6 +493,30 @@ def register():
     # GET request â€” show registration form
     return render_template_string(register_html)
 
+
+# Exempt admin login from CSRF
+@csrf.exempt
+@app.route("/admin/login", methods=["GET", "POST"])
+@limiter.limit("5 per minute")
+def admin_login():
+    error = None
+    if request.method == "POST":
+        username = request.form.get("username")
+        password = request.form.get("password")
+
+        with get_db_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("SELECT id, hashed_password FROM admins WHERE username = %s", (username,))
+            admin = cursor.fetchone()
+
+            if admin and verify_password(admin[1], password):
+                session["admin_id"] = admin[0]
+                session["is_admin"] = True
+                return redirect(url_for("admin_dashboard"))
+            else:
+                error = "Invalid admin credentials."
+
+    return render_template_string(admin_login_html, error=error)
 
 @app.route("/offline")
 def offline():
@@ -3898,7 +3900,6 @@ login_html = """
 </body>  
 </html>  
 """
-
 admin_login_html = """  
 <!DOCTYPE html>  
 <html lang="en">  
@@ -3924,7 +3925,6 @@ admin_login_html = """
         <h1>Admin Login</h1>  
         {% if error %} <p class="error">{{ error }}</p> {% endif %}  
         <form method="POST" action="/admin/login" id="adminLoginForm" autocomplete="on">  
-            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
             <label for="adminUsername">Username:</label>  
             <input type="text" id="adminUsername" name="username" required autocomplete="username" placeholder="Admin username">  
             <label for="adminPassword">Password:</label>  
@@ -3932,9 +3932,6 @@ admin_login_html = """
             <button type="submit">Login</button>  
         </form>  
     </div>  
-    <script>  
-        document.getElementById('adminLoginForm').addEventListener('submit', function() { console.log('Admin login submitted'); });  
-    </script>  
 </body>  
 </html>  
 """
