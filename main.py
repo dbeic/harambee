@@ -1,4 +1,3 @@
-#Best of the best 1
 import os
 from dotenv import load_dotenv
 import psycopg2
@@ -240,6 +239,20 @@ def init_db():
                 FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE
             )
         """)
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS completed_games (
+                id SERIAL PRIMARY KEY,
+                game_code TEXT UNIQUE NOT NULL,
+                timestamp TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                num_users INTEGER NOT NULL,
+                total_amount NUMERIC NOT NULL,
+                winner_id INTEGER NOT NULL,
+                winner_username TEXT NOT NULL,
+                win_amount NUMERIC NOT NULL,
+                winner_notified BOOLEAN DEFAULT FALSE,
+                FOREIGN KEY(winner_id) REFERENCES users(id) ON DELETE CASCADE
+            )
+        """)        
         cursor.execute("SELECT COUNT(*) FROM withdrawal_fees")
         if cursor.fetchone()[0] == 0:
             cursor.execute("""
@@ -257,7 +270,10 @@ def init_db():
         cursor.execute("CREATE INDEX IF NOT EXISTS idx_transactions_user_id ON transactions(user_id)")
         cursor.execute("CREATE INDEX IF NOT EXISTS idx_results_status ON results(status)")
         cursor.execute("CREATE INDEX IF NOT EXISTS idx_withdrawal_requests_user_id ON withdrawal_requests(user_id)")
-        cursor.execute("CREATE INDEX IF NOT EXISTS idx_deposit_requests_user_id ON deposit_requests(user_id)")        
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_deposit_requests_user_id ON deposit_requests(user_id)")
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_completed_games_winner_id ON completed_games(winner_id)")
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_completed_games_winner_notified ON completed_games(winner_notified)")
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_completed_games_timestamp ON completed_games(timestamp)")                
         
         cursor.execute("SELECT id FROM admins WHERE username = %s LIMIT 1", (ADMIN_USERNAME,))
         exists = cursor.fetchone()
@@ -761,6 +777,55 @@ def play():
     except Exception as e:
         logging.error(f"Play error for user {username}: {str(e)}")
         return jsonify({"success": False, "error": "System error. Please try again."})
+        
+@app.route("/check_recent_win", methods=["GET"])
+@login_required
+def check_recent_win():
+    """Check if user won any game recently"""
+    user_id = session.get("user_id")
+    
+    try:
+        with get_db_connection() as conn:
+            cursor = conn.cursor()
+            
+            # Check for wins in last 2 minutes
+            cursor.execute("""
+                SELECT win_amount, game_code, timestamp 
+                FROM completed_games 
+                WHERE winner_id = %s 
+                AND timestamp > NOW() - INTERVAL '2 minutes'
+                ORDER BY timestamp DESC 
+                LIMIT 1
+            """, (user_id,))
+            
+            winner_data = cursor.fetchone()
+            
+            if winner_data:
+                win_amount = float(winner_data[0])
+                game_code = winner_data[1]
+                timestamp = winner_data[2]
+                
+                # Mark as notified to prevent duplicate celebrations
+                cursor.execute("""
+                    UPDATE completed_games 
+                    SET winner_notified = TRUE 
+                    WHERE winner_id = %s AND game_code = %s
+                """, (user_id, game_code))
+                
+                conn.commit()
+                
+                return jsonify({
+                    "winner": True,
+                    "win_amount": win_amount,
+                    "game_code": game_code,
+                    "timestamp": timestamp.isoformat()
+                })
+            
+            return jsonify({"winner": False})
+            
+    except Exception as e:
+        logging.error(f"Check recent win error: {str(e)}")
+        return jsonify({"winner": False})                        
 
 @app.route("/admin/add_allowed_user", methods=["POST"])
 @login_required(role='admin')
@@ -3129,6 +3194,7 @@ base_html = """
         class UltimatePlayExperience {
             constructor() {
                 this.isSubmitting = false;
+                this.winnerCelebration = new WinnerCelebration();
                 this.init();
             }
 
@@ -3388,6 +3454,312 @@ base_html = """
             }
         }
 
+        class WinnerCelebration {
+            constructor() {
+                this.isCelebrating = false;
+                this.checkInterval = null;
+            }
+
+            // Start checking for wins periodically
+            startWinDetection() {
+                // Check immediately
+                this.checkForWin();
+                
+                // Then check every 5 seconds
+                this.checkInterval = setInterval(() => {
+                    this.checkForWin();
+                }, 5000);
+            }
+
+            // Stop win detection
+            stopWinDetection() {
+                if (this.checkInterval) {
+                    clearInterval(this.checkInterval);
+                    this.checkInterval = null;
+                }
+            }
+
+            // Check if current user won
+            async checkForWin() {
+                if (this.isCelebrating) return;
+                
+                try {
+                    const response = await fetch('/check_recent_win');
+                    const data = await response.json();
+                    
+                    if (data.winner && !this.isCelebrating) {
+                        this.triggerEpicWinCelebration(data.win_amount, data.game_code);
+                    }
+                } catch (error) {
+                    console.log('Win check failed:', error);
+                }
+            }
+
+            // Epic celebration for winners only
+            async triggerEpicWinCelebration(amount, gameCode) {
+                if (this.isCelebrating) return;
+                
+                this.isCelebrating = true;
+                
+                // 1. Show winning overlay
+                this.showWinnerOverlay(amount, gameCode);
+                
+                // 2. Play victory sound
+                this.playVictoryFanfare();
+                
+                // 3. Fireworks explosion
+                await this.createFireworksShow();
+                
+                // 4. Floating money animation
+                this.createMoneyRain(amount);
+                
+                // 5. Confetti blast
+                this.createConfettiStorm();
+                
+                // 6. Update UI with winner badge
+                this.showWinnerBadge(amount);
+                
+                // Clean up after celebration
+                setTimeout(() => {
+                    this.isCelebrating = false;
+                }, 8000);
+            }
+
+            showWinnerOverlay(amount, gameCode) {
+                const overlay = document.createElement('div');
+                overlay.id = 'winner-celebration-overlay';
+                overlay.innerHTML = `
+                    <div style="
+                        position: fixed;
+                        top: 0;
+                        left: 0;
+                        width: 100%;
+                        height: 100%;
+                        background: linear-gradient(135deg, 
+                            rgba(212, 175, 55, 0.95) 0%, 
+                            rgba(255, 215, 0, 0.9) 50%, 
+                            rgba(255, 239, 138, 0.85) 100%);
+                        z-index: 100000;
+                        display: flex;
+                        justify-content: center;
+                        align-items: center;
+                        flex-direction: column;
+                        animation: winnerReveal 1.5s ease-out;
+                    ">
+                        <div style="
+                            background: rgba(0, 0, 0, 0.8);
+                            padding: 40px;
+                            border-radius: 25px;
+                            text-align: center;
+                            border: 4px solid #FFD700;
+                            box-shadow: 0 0 50px rgba(255, 215, 0, 0.8);
+                        ">
+                            <div style="font-size: 5rem; margin-bottom: 20px;">🏆🎉💰</div>
+                            <h1 style="color: #FFD700; font-size: 2.5rem; margin-bottom: 15px;">
+                                YOU WON!
+                            </h1>
+                            <p style="color: white; font-size: 1.8rem; font-weight: bold; margin-bottom: 10px;">
+                                Ksh. ${amount.toLocaleString()}
+                            </p>
+                            <p style="color: #FFD700; font-size: 1.2rem;">
+                                Game: ${gameCode}
+                            </p>
+                            <p style="color: #00C9B1; font-size: 1.1rem; margin-top: 20px;">
+                                🎊 Congratulations Champion! 🎊
+                            </p>
+                        </div>
+                    </div>
+                `;
+                
+                document.body.appendChild(overlay);
+                
+                // Auto-remove after 6 seconds
+                setTimeout(() => {
+                    if (overlay.parentNode) {
+                        overlay.style.animation = 'winnerExit 1s ease-in forwards';
+                        setTimeout(() => overlay.remove(), 1000);
+                    }
+                }, 6000);
+            }
+
+            playVictoryFanfare() {
+                try {
+                    const context = new (window.AudioContext || window.webkitAudioContext)();
+                    
+                    // Epic victory melody
+                    const notes = [
+                        { freq: 523.25, time: 0 },   // C5
+                        { freq: 659.25, time: 0.2 }, // E5
+                        { freq: 783.99, time: 0.4 }, // G5
+                        { freq: 1046.50, time: 0.6 }, // C6
+                        { freq: 1318.51, time: 0.8 }, // E6
+                        { freq: 1567.98, time: 1.0 }, // G6
+                    ];
+                    
+                    notes.forEach(note => {
+                        setTimeout(() => {
+                            const oscillator = context.createOscillator();
+                            const gain = context.createGain();
+                            
+                            oscillator.connect(gain);
+                            gain.connect(context.destination);
+                            
+                            oscillator.frequency.setValueAtTime(note.freq, context.currentTime);
+                            oscillator.type = 'triangle';
+                            
+                            gain.gain.setValueAtTime(0.3, context.currentTime);
+                            gain.gain.exponentialRampToValueAtTime(0.01, context.currentTime + 0.8);
+                            
+                            oscillator.start(context.currentTime);
+                            oscillator.stop(context.currentTime + 0.8);
+                        }, note.time * 1000);
+                    });
+                    
+                } catch (e) {
+                    console.log('Audio not supported');
+                }
+            }
+
+            async createFireworksShow() {
+                const colors = ['#FFD700', '#FF6B35', '#00C9B1', '#FFD166', '#D4AF37'];
+                
+                for (let i = 0; i < 15; i++) {
+                    setTimeout(() => {
+                        this.createFirework(
+                            Math.random() * window.innerWidth,
+                            Math.random() * window.innerHeight,
+                            colors[Math.floor(Math.random() * colors.length)]
+                        );
+                    }, i * 300);
+                }
+            }
+
+            createFirework(x, y, color) {
+                const firework = document.createElement('div');
+                firework.style.cssText = `
+                    position: fixed;
+                    left: ${x}px;
+                    top: ${y}px;
+                    width: 8px;
+                    height: 8px;
+                    background: ${color};
+                    border-radius: 50%;
+                    z-index: 100001;
+                    pointer-events: none;
+                    animation: fireworkExplode 1.5s ease-out forwards;
+                `;
+                
+                document.body.appendChild(firework);
+                
+                // Create explosion particles
+                for (let i = 0; i < 12; i++) {
+                    setTimeout(() => {
+                        const particle = document.createElement('div');
+                        particle.style.cssText = `
+                            position: fixed;
+                            left: ${x}px;
+                            top: ${y}px;
+                            width: 4px;
+                            height: 4px;
+                            background: ${color};
+                            border-radius: 50%;
+                            z-index: 100001;
+                            pointer-events: none;
+                            animation: fireworkParticle 1s ease-out forwards;
+                        `;
+                        document.body.appendChild(particle);
+                        
+                        setTimeout(() => particle.remove(), 1000);
+                    }, i * 50);
+                }
+                
+                setTimeout(() => firework.remove(), 1500);
+            }
+
+            createMoneyRain(amount) {
+                const moneySymbols = ['💰', '💵', '💎', '🏆', '🎯', '⭐'];
+                
+                for (let i = 0; i < 20; i++) {
+                    setTimeout(() => {
+                        const money = document.createElement('div');
+                        money.innerHTML = moneySymbols[Math.floor(Math.random() * moneySymbols.length)];
+                        money.style.cssText = `
+                            position: fixed;
+                            top: -50px;
+                            left: ${Math.random() * window.innerWidth}px;
+                            font-size: ${Math.random() * 30 + 20}px;
+                            z-index: 100002;
+                            pointer-events: none;
+                            animation: moneyFall ${Math.random() * 3 + 2}s linear forwards;
+                        `;
+                        
+                        document.body.appendChild(money);
+                        setTimeout(() => money.remove(), 5000);
+                    }, i * 200);
+                }
+            }
+
+            createConfettiStorm() {
+                const colors = ['#FFD700', '#D4AF37', '#FF6B35', '#00C9B1', '#FFD166', '#FFFFFF'];
+                
+                for (let i = 0; i < 100; i++) {
+                    setTimeout(() => {
+                        const confetti = document.createElement('div');
+                        confetti.style.cssText = `
+                            position: fixed;
+                            top: -10px;
+                            left: ${Math.random() * window.innerWidth}px;
+                            width: 10px;
+                            height: 10px;
+                            background: ${colors[Math.floor(Math.random() * colors.length)]};
+                            z-index: 100003;
+                            pointer-events: none;
+                            animation: confettiStorm ${Math.random() * 4 + 2}s ease-in forwards;
+                            transform: rotate(${Math.random() * 360}deg);
+                        `;
+                        
+                        document.body.appendChild(confetti);
+                        setTimeout(() => confetti.remove(), 6000);
+                    }, i * 30);
+                }
+            }
+
+            showWinnerBadge(amount) {
+                const badge = document.createElement('div');
+                badge.id = 'winner-badge';
+                badge.innerHTML = `
+                    <div style="
+                        position: fixed;
+                        top: 100px;
+                        right: 20px;
+                        background: linear-gradient(135deg, #FFD700, #D4AF37);
+                        color: #000;
+                        padding: 15px;
+                        border-radius: 15px;
+                        font-weight: bold;
+                        z-index: 10000;
+                        border: 3px solid #000;
+                        box-shadow: 0 0 20px rgba(255, 215, 0, 0.8);
+                        animation: badgeGlow 2s infinite alternate;
+                    ">
+                        <div style="font-size: 1.8rem;">🏆</div>
+                        <div>WINNER!</div>
+                        <div>Ksh. ${amount.toLocaleString()}</div>
+                    </div>
+                `;
+                
+                document.body.appendChild(badge);
+                
+                // Remove badge after 15 seconds
+                setTimeout(() => {
+                    if (badge.parentNode) {
+                        badge.style.animation = 'fadeOut 1s ease-in forwards';
+                        setTimeout(() => badge.remove(), 1000);
+                    }
+                }, 15000);
+            }
+        }        
+
         // Add CSS animations
         const style = document.createElement('style');
         style.textContent = `
@@ -3421,6 +3793,101 @@ base_html = """
                 0% { transform: translateX(0); opacity: 1; }
                 100% { transform: translateX(100%); opacity: 0; }
             }
+
+            /* Winner celebration animations */
+            @keyframes winnerReveal {
+                0% { 
+                    transform: scale(0.8); 
+                    opacity: 0; 
+                }
+                50% { 
+                    transform: scale(1.05); 
+                    opacity: 1; 
+                }
+                100% { 
+                    transform: scale(1); 
+                    opacity: 1; 
+                }
+            }
+
+            @keyframes winnerExit {
+                0% { 
+                    transform: scale(1); 
+                    opacity: 1; 
+                }
+                100% { 
+                    transform: scale(1.2); 
+                    opacity: 0; 
+                }
+            }
+
+            @keyframes fireworkExplode {
+                0% { 
+                    transform: scale(1); 
+                    opacity: 1; 
+                    box-shadow: 0 0 20px currentColor;
+                }
+                100% { 
+                    transform: scale(0); 
+                    opacity: 0; 
+                    box-shadow: 0 0 50px currentColor;
+                }
+            }
+
+            @keyframes fireworkParticle {
+                0% { 
+                    transform: translate(0, 0) scale(1); 
+                    opacity: 1; 
+                }
+                100% { 
+                    transform: translate(var(--particle-x, 100px), var(--particle-y, 100px)) scale(0); 
+                    opacity: 0; 
+                }
+            }
+
+            @keyframes moneyFall {
+                0% { 
+                    transform: translateY(0) rotate(0deg); 
+                    opacity: 1; 
+                }
+                100% { 
+                    transform: translateY(100vh) rotate(360deg); 
+                    opacity: 0; 
+                }
+            }
+
+            @keyframes confettiStorm {
+                0% { 
+                    transform: translateY(0) rotate(0deg); 
+                    opacity: 1; 
+                }
+                100% { 
+                    transform: translateY(100vh) rotate(360deg); 
+                    opacity: 0; 
+                }
+            }
+
+            @keyframes badgeGlow {
+                0% { 
+                    box-shadow: 0 0 20px rgba(255, 215, 0, 0.8); 
+                    transform: scale(1);
+                }
+                100% { 
+                    box-shadow: 0 0 40px rgba(255, 215, 0, 1); 
+                    transform: scale(1.05);
+                }
+            }
+
+            @keyframes fadeOut {
+                0% { 
+                    opacity: 1; 
+                    transform: scale(1);
+                }
+                100% { 
+                    opacity: 0; 
+                    transform: scale(0.8);
+                }
+            }
         `;
         document.head.appendChild(style);
 
@@ -3429,7 +3896,17 @@ base_html = """
             new UltimatePlayExperience();
             console.log('🎮 Ultimate Play Experience Activated!');
         });
-
+        
+        // 🆕 START WIN DETECTION FOR LOGGED-IN USERS
+            {% if session.get('user_id') %}
+            setTimeout(() => {
+                window.winnerCelebration = new         WinnerCelebration();
+                window.winnerCelebration.startWinDetection();
+                console.log('🎯 Winner detection started!');
+            }, 2000);
+            {% endif %}
+        });
+        
         //////////////////////////////
         // Offline features (trivia, achievements)
         //////////////////////////////
@@ -3802,37 +4279,38 @@ base_html = """
             // Ensure online status UI is current
             updateOnlineStatusUI();
         }); // DOMContentLoaded
-// Add this to your base.html template in the script section
-class GameStatusUpdater {
-    constructor() {
-        this.eventSource = null;
-        this.init();
-    }
 
-    init() {
-        this.startEventSource();
-        this.fetchGameData();
-        setInterval(() => this.fetchGameData(), 5000); // Refresh every 5 seconds
-    }
+        // Add this to your base.html template in the script section
+        class GameStatusUpdater {
+            constructor() {
+                this.eventSource = null;
+                this.init();
+            }
 
-    startEventSource() {
-        try {
-            this.eventSource = new EventSource('/stream');
-            
-            this.eventSource.onmessage = (event) => {
-                const data = JSON.parse(event.data);
-                this.updateGameDisplay(data);
-            };
+            init() {
+                this.startEventSource();
+                this.fetchGameData();
+                setInterval(() => this.fetchGameData(), 5000); // Refresh every 5 seconds
+            }
 
-            this.eventSource.onerror = (error) => {
-                console.error('EventSource error:', error);
-                // Try to reconnect after 5 seconds
-                setTimeout(() => this.startEventSource(), 5000);
-            };
-        } catch (error) {
-            console.error('Failed to start EventSource:', error);
-        }
-    }
+            startEventSource() {
+                try {
+                    this.eventSource = new EventSource('/stream');
+                    
+                    this.eventSource.onmessage = (event) => {
+                        const data = JSON.parse(event.data);
+                        this.updateGameDisplay(data);
+                    };
+
+                    this.eventSource.onerror = (error) => {
+                        console.error('EventSource error:', error);
+                        // Try to reconnect after 5 seconds
+                        setTimeout(() => this.startEventSource(), 5000);
+                    };
+                } catch (error) {
+                    console.error('Failed to start EventSource:', error);
+                }
+            }
 
             async fetchGameData() {
                 try {
