@@ -3896,10 +3896,7 @@ class GameStatusUpdater {
         // Initialize when page loads
         document.addEventListener('DOMContentLoaded', function() {
             new GameStatusUpdater();
-        });
-        
-        // Temporary test - add this to your  browser console
-        fetch('/game_data').then(r => r.json()).then(console.log);       
+        });       
     </script>
 </body>
 </html>
