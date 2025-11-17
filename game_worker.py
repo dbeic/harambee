@@ -176,14 +176,14 @@ def process_game_round(players, game_code):
 def process_game_transactions(cursor, players, winner_id, stake_amount, winner_amount, game_code):
     """Process all financial transactions for the game"""
     
-    # Deduct stake from all players (use 'game_entry' type)
+    # Log deductions for all players (but DON'T deduct money - already done in /play)
     deduction_data = []
     for player in players:
         user_id = player[0]
-        cursor.execute("UPDATE users SET wallet = wallet - %s WHERE id = %s", (stake_amount, user_id))
+        # ❌ REMOVE THIS: cursor.execute("UPDATE users SET wallet = wallet - %s WHERE id = %s", (stake_amount, user_id))
         deduction_data.append((user_id, "game_entry", -stake_amount, get_timestamp(), game_code))
     
-    # Add winnings to winner (use 'win' type)
+    # Add winnings to winner
     cursor.execute("UPDATE users SET wallet = wallet + %s WHERE id = %s", (winner_amount, winner_id))
     winning_data = (winner_id, "win", winner_amount, get_timestamp(), game_code)
     
