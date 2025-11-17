@@ -1,3 +1,4 @@
+#went for the best of the best 1 again after problems with two past
 #Best of the best 1
 import os
 from dotenv import load_dotenv
@@ -2965,16 +2966,10 @@ base_html = """
         .game-result p {
             margin: 5px 0;
             font-size: 0.9rem;
-        }             
+        }        
     </style>
 </head>
 <body>
-    <!-- Install button for PWA -->
-    <button id="install-btn"
-            class="cta-button"
-            style="position:fixed; top:20px; right:20px; display:none; z-index:1000;">
-        📱 Install App
-    </button>
     <!-- Header (logo kept in true color) -->
     <header>
         <div class="site-logo" style="align-items:center;">
@@ -3128,6 +3123,8 @@ base_html = """
     </div>
 
     <!-- Game Animation Overlay -->
+    <!-- Install button for PWA -->
+    <button id="install-btn" class="cta-button" style="position:fixed; top:20px; right:20px; display:none; z-index:1000;">📱 Install App</button>
 
     <script>
         class UltimatePlayExperience {
@@ -3211,7 +3208,7 @@ base_html = """
                 // Play victory sound
                 this.playVictorySound();
         
-                Update game data
+                // Update game data
                 setTimeout(() => this.fetchGameData(), 1000);
             }
 
@@ -3756,7 +3753,7 @@ base_html = """
             }
 
             // Initial fetch and interval
-            //fetchGameData();
+            fetchGameData();
             setInterval(fetchGameData, 9000);
 
             // Initialize and start GameAnimator monitor
@@ -3900,7 +3897,10 @@ class GameStatusUpdater {
         // Initialize when page loads
         document.addEventListener('DOMContentLoaded', function() {
             new GameStatusUpdater();
-        });       
+        });
+        
+        // Temporary test - add this to your  browser console
+        fetch('/game_data').then(r => r.json()).then(console.log);       
     </script>
 </body>
 </html>
