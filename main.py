@@ -2965,34 +2965,16 @@ base_html = """
         .game-result p {
             margin: 5px 0;
             font-size: 0.9rem;
-        }
-    <!-- Install button for PWA -->
-    <button id="install-btn"
-        class="cta-button"
-        style="position:fixed; top:20px; right:20px; display:none; z-index:1000;">
-        📱 Install App
-    </button>
-
-    <!-- PWA Install Logic -->
-    <script>
-        let deferredPrompt;
-        const installBtn = document.getElementById("install-btn");
-
-        window.addEventListener("beforeinstallprompt", (e) => {
-            e.preventDefault();
-            deferredPrompt = e;
-            installBtn.style.display = "block";
-        });
-
-        installBtn.addEventListener("click", async () => {
-            installBtn.style.display = "none";
-            deferredPrompt.prompt();
-            await deferredPrompt.userChoice;
-            deferredPrompt = null;
-        });               
+        }             
     </style>
 </head>
 <body>
+    <!-- Install button for PWA -->
+    <button id="install-btn"
+            class="cta-button"
+            style="position:fixed; top:20px; right:20px; display:none; z-index:1000;">
+        📱 Install App
+    </button>
     <!-- Header (logo kept in true color) -->
     <header>
         <div class="site-logo" style="align-items:center;">
@@ -3774,7 +3756,7 @@ base_html = """
             }
 
             // Initial fetch and interval
-            fetchGameData();
+            //fetchGameData();
             setInterval(fetchGameData, 9000);
 
             // Initialize and start GameAnimator monitor
