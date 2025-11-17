@@ -1,3 +1,4 @@
+#Best of the best 1
 import os
 from dotenv import load_dotenv
 import psycopg2
@@ -2708,11 +2709,7 @@ base_html = """
             --warning: #FFD166;
         }
 
-        * { 
-            box-sizing: border-box; 
-            margin: 0; 
-            padding: 0; 
-        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
 
         html, body {
             height: 100%;
@@ -2819,22 +2816,10 @@ base_html = """
             margin-bottom: 20px;
         }
 
-        .logo-container { 
-            text-align: center; 
-            margin-bottom: 10px; 
-        }
-        
-        .logo-text { 
-            color: var(--text-light); 
-            font-weight: 800; 
-            font-size: 1.6rem; 
-        }
+        .logo-container { text-align: center; margin-bottom: 10px; }
+        .logo-text { color: var(--text-light); font-weight: 800; font-size: 1.6rem; }
 
-        .tagline { 
-            color: var(--text-gold); 
-            margin-top: 8px; 
-            font-weight: 600; 
-        }
+        .tagline { color: var(--text-gold); margin-top: 8px; font-weight: 600; }
 
         .balance-display {
             background: linear-gradient(180deg, rgba(255,215,0,0.04), rgba(255,215,0,0.02));
@@ -2844,16 +2829,8 @@ base_html = """
             display: inline-block;
         }
 
-        .balance-label { 
-            color: var(--text-muted); 
-            font-size: 0.95rem; 
-        }
-        
-        .balance-amount { 
-            color: var(--gold-secondary); 
-            font-weight: 800; 
-            font-size: 1.6rem; 
-        }
+        .balance-label { color: var(--text-muted); font-size: 0.95rem; }
+        .balance-amount { color: var(--gold-secondary); font-weight: 800; font-size: 1.6rem; }
 
         .cta-button {
             background: var(--gold-gradient);
@@ -2867,10 +2844,7 @@ base_html = """
             transition: var(--transition);
         }
 
-        .cta-button:hover { 
-            transform: translateY(-3px); 
-            background: var(--gold-gradient-reverse); 
-        }
+        .cta-button:hover { transform: translateY(-3px); background: var(--gold-gradient-reverse); }
 
         .features-grid {
             display: grid;
@@ -2894,12 +2868,7 @@ base_html = """
             border: 1px solid rgba(212,175,55,0.06);
         }
 
-        .game-result { 
-            background: rgba(0,0,0,0.25); 
-            padding: 12px; 
-            border-radius: 12px; 
-            margin-bottom: 12px; 
-        }
+        .game-result { background: rgba(0,0,0,0.25); padding: 12px; border-radius: 12px; margin-bottom: 12px; }
 
         .offline-banner {
             background: rgba(255,107,53,0.08);
@@ -2928,15 +2897,8 @@ base_html = """
             margin-bottom: 8px;
         }
 
-        .trivia-correct { 
-            background: rgba(0,201,177,0.12); 
-            border-color: var(--success); 
-        }
-        
-        .trivia-wrong { 
-            background: rgba(255,107,53,0.12); 
-            border-color: var(--error); 
-        }
+        .trivia-correct { background: rgba(0,201,177,0.12); border-color: var(--success); }
+        .trivia-wrong { background: rgba(255,107,53,0.12); border-color: var(--error); }
 
         .achievement-notification {
             position: fixed;
@@ -2965,49 +2927,18 @@ base_html = """
             flex-direction: column;
         }
 
-        .animation-content { 
-            text-align: center; 
-            color: white; 
-        }
-        
-        .animated-image { 
-            font-size: 6rem; 
-            margin-bottom: 16px; 
-            animation: bounce 1s infinite; 
-        }
-        
-        .animation-text { 
-            font-size: 1.6rem; 
-            font-weight: 700; 
-            text-shadow: 0 0 10px rgba(255,215,0,0.8); 
-        }
+        .animation-content { text-align: center; color: white; }
+        .animated-image { font-size: 6rem; margin-bottom: 16px; animation: bounce 1s infinite; }
+        .animation-text { font-size: 1.6rem; font-weight: 700; text-shadow: 0 0 10px rgba(255,215,0,0.8); }
 
-        .rocket, .confetti { 
-            position: absolute; 
-            font-size: 1.6rem; 
-            animation: floatUp 2s ease-out forwards; 
-        }
-        
-        .confetti { 
-            width: 10px; 
-            height: 10px; 
-            border-radius: 2px; 
-        }
+        .rocket, .confetti { position: absolute; font-size: 1.6rem; animation: floatUp 2s ease-out forwards; }
+        .confetti { width: 10px; height: 10px; border-radius: 2px; }
 
         @keyframes floatUp {
-            to { 
-                transform: translateY(-100vh) rotate(360deg); 
-                opacity: 0; 
-            }
+            to { transform: translateY(-100vh) rotate(360deg); opacity: 0; }
         }
-        
         @keyframes bounce {
-            0%,100% { 
-                transform: translateY(0); 
-            } 
-            50% { 
-                transform: translateY(-20px); 
-            }
+            0%,100% { transform: translateY(0); } 50% { transform: translateY(-20px); }
         }
 
         .footer {
@@ -3019,20 +2950,10 @@ base_html = """
 
         /* Responsive tweaks */
         @media (max-width: 600px) {
-            .site-title { 
-                font-size: 1rem; 
-            }
-            
-            .site-logo img { 
-                height: 40px; 
-            }
-            
-            .container { 
-                padding: 12px; 
-                margin: 12px; 
-            }
+            .site-title { font-size: 1rem; }
+            .site-logo img { height: 40px; }
+            .container { padding: 12px; margin: 12px; }
         }
-        
         .game-result {
             background: rgba(255,255,255,0.05);
             padding: 15px;
@@ -3096,17 +3017,9 @@ base_html = """
             {% endif %}
         {% endwith %}
 
-        {% if error %}
-            <div class="card" style="border-left:4px solid var(--error); color:var(--error);">{{ error }}</div>
-        {% endif %}
-        
-        {% if message %}
-            <div class="card" style="border-left:4px solid var(--success); color:var(--success);">{{ message }}</div>
-        {% endif %}
-        
-        {% if warning %}
-            <div class="card" style="border-left:4px solid var(--warning); color:var(--warning);">{{ warning }}</div>
-        {% endif %}
+        {% if error %}<div class="card" style="border-left:4px solid var(--error); color:var(--error);">{{ error }}</div>{% endif %}
+        {% if message %}<div class="card" style="border-left:4px solid var(--success); color:var(--success);">{{ message }}</div>{% endif %}
+        {% if warning %}<div class="card" style="border-left:4px solid var(--warning); color:var(--warning);">{{ warning }}</div>{% endif %}
 
         
         {% if not session.get('user_id') %}
@@ -3177,7 +3090,7 @@ base_html = """
                     <button class="offline-btn" onclick="showGamingTips()">📚 {% if session.get('user_id') %}Winning Strategies{% else %}Gaming Tips{% endif %}</button>
                     <button class="offline-btn" onclick="showPracticeMode()">💪 {% if session.get('user_id') %}Practice Games{% else %}Practice Strategies{% endif %}</button>
                     {% if session.get('user_id') %}
-                        <button class="offline-btn" onclick="viewAchievements()">🏆 My Achievements</button>
+                    <button class="offline-btn" onclick="viewAchievements()">🏆 My Achievements</button>
                     {% endif %}
                 </div>
                 <div id="offlineContent" style="margin-top:14px;"></div>
@@ -3544,11 +3457,7 @@ base_html = """
         }
 
         function showTriviaQuestion() {
-            if (currentTriviaQuestion >= triviaQuestions.length) { 
-                endTriviaGame(); 
-                return; 
-            }
-            
+            if (currentTriviaQuestion >= triviaQuestions.length) { endTriviaGame(); return; }
             const q = triviaQuestions[currentTriviaQuestion];
             let html = `<h3>🧠 Question ${currentTriviaQuestion + 1}/${triviaQuestions.length}</h3>
                         <p style="font-size:1.1rem; margin:12px 0;">${q.question}</p>
@@ -3569,16 +3478,9 @@ base_html = """
                 else if (index === selectedIndex && index !== question.answer) option.classList.add('trivia-wrong');
                 option.style.pointerEvents = 'none';
             });
-            if (selectedIndex === question.answer) { 
-                triviaScore++; 
-                playSoundFeedback(true); 
-            } else {
-                playSoundFeedback(false);
-            }
-            setTimeout(() => { 
-                currentTriviaQuestion++; 
-                showTriviaQuestion(); 
-            }, 1200);
+            if (selectedIndex === question.answer) { triviaScore++; playSoundFeedback(true); }
+            else playSoundFeedback(false);
+            setTimeout(() => { currentTriviaQuestion++; showTriviaQuestion(); }, 1200);
         }
 
         function playSoundFeedback(isCorrect) {
@@ -3587,30 +3489,21 @@ base_html = """
                 const context = new (window.AudioContext || window.webkitAudioContext)();
                 const osc = context.createOscillator();
                 const gain = context.createGain();
-                osc.connect(gain); 
-                gain.connect(context.destination);
+                osc.connect(gain); gain.connect(context.destination);
                 osc.frequency.value = isCorrect ? 800 : 300;
                 osc.type = 'sine';
                 gain.gain.setValueAtTime(0.3, context.currentTime);
                 gain.gain.exponentialRampToValueAtTime(0.01, context.currentTime + 0.4);
                 osc.start(context.currentTime);
                 osc.stop(context.currentTime + 0.4);
-            } catch (e) { 
-                console.log('Audio not supported', e); 
-            }
+            } catch (e) { console.log('Audio not supported', e); }
         }
 
         function endTriviaGame() {
             let msg = '';
-            if (triviaScore === triviaQuestions.length) { 
-                msg = "🎉 Perfect! You're a Harambee Cash expert!"; 
-                unlockAchievement('trivia_master'); 
-            } else if (triviaScore >= triviaQuestions.length / 2) {
-                msg = "👍 Great job! You know your stuff!";
-            } else {
-                msg = "💪 Keep learning! Read the tips to improve!";
-            }
-            
+            if (triviaScore === triviaQuestions.length) { msg = "🎉 Perfect! You're a Harambee Cash expert!"; unlockAchievement('trivia_master'); }
+            else if (triviaScore >= triviaQuestions.length / 2) msg = "👍 Great job! You know your stuff!";
+            else msg = "💪 Keep learning! Read the tips to improve!";
             const out = document.getElementById('offlineContent');
             if (out) out.innerHTML = `<div style="text-align:center; padding:20px;"><h3>🏆 Trivia Complete!</h3><p>Final Score: ${triviaScore}/${triviaQuestions.length}</p><p>${msg}</p><button class="offline-btn" onclick="startTriviaGame()">Play Again</button></div>`;
         }
@@ -3627,13 +3520,9 @@ base_html = """
                 "📱 Install the app for better experience and notifications"
             ];
             let html = '<h3>📚 Smart Gaming Tips</h3><ul style="text-align:left; margin-top:10px;">';
-            tips.forEach(t => { 
-                html += `<li style="margin:8px 0; padding:8px; background:rgba(0,201,177,0.06); border-radius:8px;">${t}</li>`; 
-            });
+            tips.forEach(t => { html += `<li style="margin:8px 0; padding:8px; background:rgba(0,201,177,0.06); border-radius:8px;">${t}</li>`; });
             html += '</ul><div style="text-align:center; margin-top:12px;"><button class="offline-btn" onclick="showPracticeMode()">Next: Practice Strategies</button></div>';
-            const out = document.getElementById('offlineContent'); 
-            if (out) out.innerHTML = html; 
-            unlockAchievement('knowledge_seeker');
+            const out = document.getElementById('offlineContent'); if (out) out.innerHTML = html; unlockAchievement('knowledge_seeker');
         }
 
         function showPracticeMode() {
@@ -3646,17 +3535,14 @@ base_html = """
                 </div>
                 <div style="margin-top:12px;"><button class="offline-btn" onclick="startTriviaGame()">Test Your Knowledge</button></div>
             </div>`;
-            const out = document.getElementById('offlineContent'); 
-            if (out) out.innerHTML = html;
+            const out = document.getElementById('offlineContent'); if (out) out.innerHTML = html;
         }
 
         function unlockAchievement(id) {
             if (achievements[id] && !achievements[id].unlocked) {
                 achievements[id].unlocked = true;
                 showAchievementNotification(achievements[id].name);
-                try { 
-                    localStorage.setItem('harambeeAchievements', JSON.stringify(achievements)); 
-                } catch(e){}
+                try { localStorage.setItem('harambeeAchievements', JSON.stringify(achievements)); } catch(e){}
             }
         }
 
@@ -3665,12 +3551,7 @@ base_html = """
             n.className = 'achievement-notification';
             n.innerHTML = `<div style="text-align:center;"><div style="font-size:1.4rem;">🏆</div><h4 style="margin:6px 0;">Achievement Unlocked!</h4><div>${name}</div></div>`;
             document.body.appendChild(n);
-            setTimeout(() => { 
-                n.style.opacity = '0'; 
-                setTimeout(()=>{ 
-                    if (n.parentNode) n.parentNode.removeChild(n); 
-                }, 500); 
-            }, 3000);
+            setTimeout(() => { n.style.opacity = '0'; setTimeout(()=>{ if (n.parentNode) n.parentNode.removeChild(n); }, 500); }, 3000);
         }
 
         function viewAchievements() {
@@ -3683,14 +3564,11 @@ base_html = """
                 </div>`;
             });
             html += '</div>';
-            const out = document.getElementById('offlineContent'); 
-            if (out) out.innerHTML = html;
+            const out = document.getElementById('offlineContent'); if (out) out.innerHTML = html;
         }
 
         function saveAchievements() {
-            try { 
-                localStorage.setItem('harambeeAchievements', JSON.stringify(achievements)); 
-            } catch(e){}
+            try { localStorage.setItem('harambeeAchievements', JSON.stringify(achievements)); } catch(e){}
         }
 
         function loadAchievements() {
@@ -3698,13 +3576,9 @@ base_html = """
                 const s = localStorage.getItem('harambeeAchievements');
                 if (s) {
                     const loaded = JSON.parse(s);
-                    Object.keys(loaded).forEach(k => { 
-                        if (achievements[k]) achievements[k].unlocked = loaded[k].unlocked; 
-                    });
+                    Object.keys(loaded).forEach(k => { if (achievements[k]) achievements[k].unlocked = loaded[k].unlocked; });
                 }
-            } catch(e) { 
-                console.error('Error loading achievements', e); 
-            }
+            } catch(e) { console.error('Error loading achievements', e); }
         }
 
         function updateOnlineStatusUI() {
@@ -3791,9 +3665,7 @@ base_html = """
                         if (container) container.insertBefore(ts, container.firstChild);
                     }
                     ts.textContent = `🕒 ${formatter.format(time)}`;
-                } catch (e) { 
-                    console.error(e); 
-                }
+                } catch (e) { console.error(e); }
             }
             updateLocalTime();
             setInterval(updateLocalTime, 1000);
@@ -3902,14 +3774,8 @@ base_html = """
                     return false;
                 }
                 const button = event.target;
-                if (button && button.disabled) { 
-                    event.preventDefault(); 
-                    return false; 
-                }
-                if (button) { 
-                    button.disabled = true; 
-                    button.innerHTML = '🎮 PROCESSING...'; 
-                }
+                if (button && button.disabled) { event.preventDefault(); return false; }
+                if (button) { button.disabled = true; button.innerHTML = '🎮 PROCESSING...'; }
 
                 // Show animation quickly
                 const ga = window.gameAnimator || null;
@@ -3927,10 +3793,7 @@ base_html = """
 
                 // Re-enable after a short fail-safe if form doesn't navigate
                 setTimeout(() => {
-                    if (button) { 
-                        button.disabled = false; 
-                        button.innerHTML = '🎮 PLAY NOW & WIN BIG!'; 
-                    }
+                    if (button) { button.disabled = false; button.innerHTML = '🎮 PLAY NOW & WIN BIG!'; }
                 }, 3000);
 
                 return true;
@@ -3939,38 +3802,37 @@ base_html = """
             // Ensure online status UI is current
             updateOnlineStatusUI();
         }); // DOMContentLoaded
+// Add this to your base.html template in the script section
+class GameStatusUpdater {
+    constructor() {
+        this.eventSource = null;
+        this.init();
+    }
 
-        // Add this to your base.html template in the script section
-        class GameStatusUpdater {
-            constructor() {
-                this.eventSource = null;
-                this.init();
-            }
+    init() {
+        this.startEventSource();
+        this.fetchGameData();
+        setInterval(() => this.fetchGameData(), 5000); // Refresh every 5 seconds
+    }
 
-            init() {
-                this.startEventSource();
-                this.fetchGameData();
-                setInterval(() => this.fetchGameData(), 5000); // Refresh every 5 seconds
-            }
+    startEventSource() {
+        try {
+            this.eventSource = new EventSource('/stream');
+            
+            this.eventSource.onmessage = (event) => {
+                const data = JSON.parse(event.data);
+                this.updateGameDisplay(data);
+            };
 
-            startEventSource() {
-                try {
-                    this.eventSource = new EventSource('/stream');
-                    
-                    this.eventSource.onmessage = (event) => {
-                        const data = JSON.parse(event.data);
-                        this.updateGameDisplay(data);
-                    };
-
-                    this.eventSource.onerror = (error) => {
-                        console.error('EventSource error:', error);
-                        // Try to reconnect after 5 seconds
-                        setTimeout(() => this.startEventSource(), 5000);
-                    };
-                } catch (error) {
-                    console.error('Failed to start EventSource:', error);
-                }
-            }
+            this.eventSource.onerror = (error) => {
+                console.error('EventSource error:', error);
+                // Try to reconnect after 5 seconds
+                setTimeout(() => this.startEventSource(), 5000);
+            };
+        } catch (error) {
+            console.error('Failed to start EventSource:', error);
+        }
+    }
 
             async fetchGameData() {
                 try {
@@ -4037,7 +3899,7 @@ base_html = """
         });
         
         // Temporary test - add this to your  browser console
-        fetch('/game_data').then(r => r.json()).then(console.log);        
+        fetch('/game_data').then(r => r.json()).then(console.log);       
     </script>
 </body>
 </html>
