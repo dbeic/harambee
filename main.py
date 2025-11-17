@@ -2965,7 +2965,31 @@ base_html = """
         .game-result p {
             margin: 5px 0;
             font-size: 0.9rem;
-        }        
+        }
+    <!-- Install button for PWA -->
+    <button id="install-btn"
+        class="cta-button"
+        style="position:fixed; top:20px; right:20px; display:none; z-index:1000;">
+        📱 Install App
+    </button>
+
+    <!-- PWA Install Logic -->
+    <script>
+        let deferredPrompt;
+        const installBtn = document.getElementById("install-btn");
+
+        window.addEventListener("beforeinstallprompt", (e) => {
+            e.preventDefault();
+            deferredPrompt = e;
+            installBtn.style.display = "block";
+        });
+
+        installBtn.addEventListener("click", async () => {
+            installBtn.style.display = "none";
+            deferredPrompt.prompt();
+            await deferredPrompt.userChoice;
+            deferredPrompt = null;
+        });               
     </style>
 </head>
 <body>
@@ -3122,8 +3146,6 @@ base_html = """
     </div>
 
     <!-- Game Animation Overlay -->
-    <!-- Install button for PWA -->
-    <button id="install-btn" class="cta-button" style="position:fixed; top:20px; right:20px; display:none; z-index:1000;">📱 Install App</button>
 
     <script>
         class UltimatePlayExperience {
@@ -3207,7 +3229,7 @@ base_html = """
                 // Play victory sound
                 this.playVictorySound();
         
-                // Update game data
+                Update game data
                 setTimeout(() => this.fetchGameData(), 1000);
             }
 
