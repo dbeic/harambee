@@ -442,10 +442,10 @@ def admin_login():
             else:
                 return render_template_string(admin_login_html, error="Invalid admin credentials.")
 
-    return render_template_string(admin_login_html, error=None)          
+    return render_template_string(admin_login_html, error=None)                
                 
 @app.route("/login", methods=["GET", "POST"])
-@limiter.limit("5 per minute; 20 per hour")
+@limiter.limit("5 per minute")
 def login():
     if session.get('user_id'):
         return redirect(url_for('index'))
@@ -984,6 +984,9 @@ def cashbook():
         return render_template_string(cashbook_html, data=cashbook_data)
         
 ###############
+@app.route('/api/game/status')
+def game_status():
+    return jsonify({'status': 'success' if game_just_won else 'pending'})
         
 @app.route("/withdraw", methods=["GET", "POST"])
 @login_required()
@@ -2975,7 +2978,8 @@ base_html = """
             margin: 5px 0;
             font-size: 0.9rem;
         }        
-    </style>
+    </style>    
+
     <!-- PWA Manifest -->
     <link rel="manifest" href="{{ url_for('static', filename='manifest.json') }}">
     <meta name="theme-color" content="#your-theme-color">
@@ -2991,20 +2995,22 @@ base_html = """
     <meta name="description" content="Play & Win Big with Golden Opportunities!">    
 </head>
 <body>
-    <!-- PWA Install Button -->
-    <button id="install-btn" class="cta-button" style="display:none;">📱 Install App</button>
+    <audio id="gameEndSound" preload="auto" style="display: none;">
+    <source src="{{ url_for('static', filename='sounds/game-end.mp3') }}" type="audio/mpeg">
+    </audio>
     <!-- Header (logo kept in true color) -->
     <header>
         <div class="site-logo" style="align-items:center;">
-        <img src="{{ url_for('static', filename='piclog.png') }}"
-        alt="Harambee Cash Logo"
-        style="width:120px; height:auto;" />      
+            <img src="{{ url_for('static', filename='piclog.png') }}" alt="Harambee Cash Logo" />
+            <div>
                 <div class="site-title">HARAMBEE CASH</div>
                 <div class="tagline" style="font-size:0.85rem; margin-top:4px;">Play & Win Big with Golden Opportunities!</div>
             </div>                          
             <div class="header-actions">
                 {% if session.get('user_id') %}
-                    <div class="wallet-badge">Ksh. {{ wallet_balance | default(0.0) | float |  round(2) }}</div>
+                    <div class="wallet-badge">Ksh. {{ wallet_balance | default(0.0) | float | round(2) }}</div>
+                    <!-- PWA Install Button -->
+                    <button id="install-btn" class="cta-button" style="display:none;">📱 Install App</button>
                     <!-- Play form -->                    
                     <form method="POST" action="{{ url_for('play') }}" id="playForm" style="text-align:center; margin-bottom:16px;">
                         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
@@ -3012,8 +3018,8 @@ base_html = """
                     </form>                                         
                 {% endif %}
             </div>
-        </div>                          
-    </header>
+        </div>                      
+    </header>                   
 
     <!-- Navigation -->
     <nav>
@@ -3627,48 +3633,6 @@ base_html = """
             // Load achievements
             loadAchievements();
                         
-            // PWA service worker registration
-            if ('serviceWorker' in navigator) {
-                window.addEventListener('load',  function() {
-                    navigator.serviceWorker. register('{{ url_for("static",  filename="service-worker.js") }}')
-                        .then(function(registration) {
-                            console. log('ServiceWorker registered successfully: ', registration.scope);
-                        })
-                        .catch(function(error) {
-                            console.log('ServiceWorker registration failed: ', error);
-                        });
-                });
-            }            
-            
-
-            // Enhanced PWA install prompt
-            let deferredPrompt;
-            const installBtn = document.getElementById('install-btn');
-
-            window.addEventListener('beforeinstallprompt', (e) => {
-                e.preventDefault();
-                deferredPrompt = e;
-                if (installBtn) {
-                    installBtn.style.display = 'block';
-                    installBtn.addEventListener('click', async () => {
-                        if (!deferredPrompt) return;
-                        deferredPrompt.prompt();
-                        const { outcome } = await deferredPrompt.userChoice;
-                        if (outcome === 'accepted') {
-                            console.log('PWA installed');
-                            installBtn.style.display = 'none';
-                        }
-                        deferredPrompt = null;
-                    });
-                }
-            });
-
-            window.addEventListener('appinstalled', () => {
-                console.log('PWA was installed');
-                if (installBtn) installBtn.style.display = 'none';
-                deferredPrompt = null;
-            });
-
             // Network status events
             window.addEventListener('online', updateOnlineStatusUI);
             window.addEventListener('offline', updateOnlineStatusUI);
@@ -3932,6 +3896,25 @@ class GameStatusUpdater {
         // Temporary test - add this to your  browser console
         fetch('/game_data').then(r => r.json()).then(console.log);       
     </script>
+let lastGameStatus = '';
+
+        function watchGameStatus() {
+            setInterval(() => {
+                fetch('/api/game/status')
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.status === 'success' && lastGameStatus !== 'success') {
+                            document.getElementById('gameEndSound').play().catch(() => {});
+                            lastGameStatus = 'success';
+                        } else if (data.status !== 'success') {
+                            lastGameStatus = '';
+                        }
+                    })
+                    .catch(() => {});
+            }, 2000);
+        }
+
+        document. addEventListener('DOMContentLoaded', watchGameStatus);   
     
     <script>
     // Auto-remove login required messages after 5 seconds
@@ -3946,7 +3929,49 @@ class GameStatusUpdater {
             });
         }, 5000); // Remove after 5 seconds
     });
-    </script>    
+    </script>
+    
+    // PWA service worker registration
+    if ('serviceWorker' in navigator) {
+        window.addEventListener('load',  function() {
+            navigator.serviceWorker. register('{{ url_for("static",  filename="service-worker.js") }}')
+                .then(function(registration) {
+                    console. log('ServiceWorker registered successfully: ', registration.scope);
+                })
+                .catch(function(error) {
+                    console.log('ServiceWorker registration failed: ', error);
+                });
+        });
+    }            
+            
+
+    // Enhanced PWA install prompt
+    let deferredPrompt;
+    const installBtn = document.getElementById('install-btn');
+
+    window.addEventListener('beforeinstallprompt', (e) => {
+        e.preventDefault();
+        deferredPrompt = e;
+        if (installBtn) {
+            installBtn.style.display = 'block';
+            installBtn.addEventListener('click', async () => {
+                if (!deferredPrompt) return;
+                deferredPrompt.prompt();
+                const { outcome } = await deferredPrompt.userChoice;
+                if (outcome === 'accepted') {
+                    console.log('PWA installed');
+                    installBtn.style.display = 'none';
+                }
+                deferredPrompt = null;
+            });
+        }
+    });
+
+    window.addEventListener('appinstalled', () => {
+        console.log('PWA was installed');
+        if (installBtn) installBtn.style.display = 'none';
+        deferredPrompt = null;
+    });       
 </body>
 </html>
 """
