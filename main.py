@@ -54,7 +54,12 @@ csrf = CSRFProtect(app)
 
 # Rate limiter that prefers logged-in user id, otherwise IP
 def rate_limit_key():
-    return session.get("user_id") or get_remote_address()
+    return (
+        session.get("admin_id") or
+        session.get("user_id") or
+        request.remote_addr
+    )
+
 
 limiter = Limiter(
     key_func=rate_limit_key,
@@ -404,7 +409,7 @@ def static_files(filename):
 
 #Routes
 @app.route("/")
-@limiter.limit("10 per hour")
+@limiter.limit("200 per minute")
 def index():
     if 'user_id' in session:
         wallet_balance = get_wallet_balance(session['user_id'])
@@ -415,8 +420,9 @@ def index():
                                 wallet_balance=wallet_balance,
                                 session=session)
 
+@csrf.exempt
 @app.route("/admin/login", methods=["GET", "POST"])
-@limiter.limit("5 per minute")
+@limiter.limit("5 per minute; 20 per hour")
 def admin_login():
     if request.method == "POST":
         username = request.form.get("username")
@@ -436,10 +442,10 @@ def admin_login():
             else:
                 return render_template_string(admin_login_html, error="Invalid admin credentials.")
 
-    return render_template_string(admin_login_html, error=None)                
+    return render_template_string(admin_login_html, error=None)          
                 
 @app.route("/login", methods=["GET", "POST"])
-@limiter.limit("5 per minute")
+@limiter.limit("5 per minute; 20 per hour")
 def login():
     if session.get('user_id'):
         return redirect(url_for('index'))
