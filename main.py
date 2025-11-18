@@ -342,7 +342,6 @@ def log_transaction(user_id, transaction_type, amount):
         logging.error(f"Error in log_transaction(): {e}")
 
 # --- Logging visitors / activity ---
-# --- Logging visitors / activity ---
 def log_visit_entry(ip_address, user_agent, referrer=None, page=None, timestamp=None):
     # Ensure timestamp is always a string
     if timestamp is None:
@@ -2837,7 +2836,7 @@ base_html = """
             background: var(--gold-gradient);
             color: var(--dark-bg);
             border: none;
-            padding: 12px 26px;
+            padding: 8px 40px;
             font-size: 1rem;
             font-weight: 700;
             border-radius: 999px;
@@ -2981,6 +2980,8 @@ base_html = """
             <div class="header-actions">
                 {% if session.get('user_id') %}
                     <div class="wallet-badge">Ksh. {{ wallet_balance | default(0.0) | float |  round(2) }}</div>
+                    <!-- PWA Install Button -->
+                    <button id="install-btn" class="cta-button" style="display:none;">📱 Install App</button>
                     <!-- Play form -->                    
                     <form method="POST" action="{{ url_for('play') }}" id="playForm" style="text-align:center; margin-bottom:16px;">
                         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
@@ -3123,9 +3124,6 @@ base_html = """
     </div>
 
     <!-- Game Animation Overlay -->
-    <!-- Install button for PWA -->
-    <button id="install-btn" class="cta-button" style="position:fixed; top:20px; right:20px; display:none; z-index:1000;">📱 Install App</button>
-
     <script>
         class UltimatePlayExperience {
             constructor() {
@@ -3605,38 +3603,47 @@ base_html = """
 
             // Load achievements
             loadAchievements();
-
-            // PWA service worker (server route)
+                        
+            // PWA service worker registration
             if ('serviceWorker' in navigator) {
-                navigator.serviceWorker.register('{{ url_for("static", filename="service-worker.js") }}')
-                    .then(reg => console.log('ServiceWorker registered', reg))
-                    .catch(err => console.log('SW registration failed', err));
-            }
+                window.addEventListener('load',  function() {
+                    navigator.serviceWorker. register('{{ url_for("static",  filename="service-worker.js") }}')
+                        .then(function(registration) {
+                            console. log('ServiceWorker registered successfully: ', registration.scope);
+                        })
+                        .catch(function(error) {
+                            console.log('ServiceWorker registration failed: ', error);
+                        });
+                });
+            }            
+            
 
-            // PWA install prompt handling
+            // Enhanced PWA install prompt
             let deferredPrompt;
             const installBtn = document.getElementById('install-btn');
+
             window.addEventListener('beforeinstallprompt', (e) => {
                 e.preventDefault();
                 deferredPrompt = e;
-                if (installBtn) installBtn.style.display = 'inline-block';
+                if (installBtn) {
+                    installBtn.style.display = 'block';
+                    installBtn.addEventListener('click', async () => {
+                        if (!deferredPrompt) return;
+                        deferredPrompt.prompt();
+                        const { outcome } = await deferredPrompt.userChoice;
+                        if (outcome === 'accepted') {
+                            console.log('PWA installed');
+                            installBtn.style.display = 'none';
+                        }
+                        deferredPrompt = null;
+                    });
+                }
             });
 
-            if (installBtn) {
-                installBtn.addEventListener('click', async () => {
-                    if (!deferredPrompt) return;
-                    deferredPrompt.prompt();
-                    const choice = await deferredPrompt.userChoice;
-                    if (choice.outcome === 'accepted') {
-                        unlockAchievement('app_installer');
-                        installBtn.style.display = 'none';
-                    }
-                    deferredPrompt = null;
-                });
-            }
-
             window.addEventListener('appinstalled', () => {
+                console.log('PWA was installed');
                 if (installBtn) installBtn.style.display = 'none';
+                deferredPrompt = null;
             });
 
             // Network status events
@@ -3902,6 +3909,21 @@ class GameStatusUpdater {
         // Temporary test - add this to your  browser console
         fetch('/game_data').then(r => r.json()).then(console.log);       
     </script>
+    
+    <script>
+    // Auto-remove login required messages after 5 seconds
+    document.addEventListener('DOMContentLoaded', function() {
+        setTimeout(() => {
+            const messages = document.querySelectorAll('.card');
+            messages.forEach(message => {
+                if (message.textContent.includes('Please log in') || 
+                    message.textContent.includes('Access denied')) {
+                    message.remove();
+                }
+            });
+        }, 5000); // Remove after 5 seconds
+    });
+    </script>    
 </body>
 </html>
 """
@@ -3951,7 +3973,7 @@ register_html = """<!DOCTYPE html>
         <div class="back-link">
             <p>Already have an account? <a href="/login">Login</a></p>
             <p><a href="/">â† Back to Home</a></p>
-        </div>
+        </div>      
     </div>
 </body>
 </html>
