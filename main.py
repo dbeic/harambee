@@ -1,5 +1,5 @@
 #went for the best of the best 1 again after problems with two past
-#Best of the best 1
+#Best of the best 11
 import os
 from dotenv import load_dotenv
 import psycopg2
@@ -29,10 +29,6 @@ from game_worker import run_game
 from shared import get_db_connection
 
 load_dotenv()
-
-#now = datetime.now()
-#now_str = now.strftime("%Y-%m-%d %H:%M:%S")  # convert to string
-#date_part = now_str.split(" ")[0]  # now you can safely split
 
 # --- Configuration & logging ---
 logging.basicConfig(level=logging.DEBUG, format="%(asctime)s - %(levelname)s - %(message)s")
@@ -419,33 +415,10 @@ def index():
     return render_template_string(base_html, 
                                 wallet_balance=wallet_balance,
                                 session=session)
-
-@csrf.exempt
-@app.route("/admin/login", methods=["GET", "POST"])
-@limiter.limit("5 per minute; 20 per hour")
-def admin_login():
-    if request.method == "POST":
-        username = request.form.get("username")
-        password = request.form.get("password")
-
-        with get_db_connection() as conn:
-            cursor = conn.cursor()
-            cursor.execute("SELECT id, hashed_password FROM admins WHERE username = %s", (username,))
-            admin = cursor.fetchone()
-
-            if admin and verify_password(admin[1], password):
-                session["admin_id"] = admin[0]
-                session["is_admin"] = True
-                response = redirect(url_for("admin_dashboard"))
-                response.headers['X-Frame-Options'] = 'SAMEORIGIN'
-                return response
-            else:
-                return render_template_string(admin_login_html, error="Invalid admin credentials.")
-
-    return render_template_string(admin_login_html, error=None)                
+          
                 
 @app.route("/login", methods=["GET", "POST"])
-@limiter.limit("5 per minute")
+@limiter.limit("5 per minute, 20 per hour")
 def login():
     if session.get('user_id'):
         return redirect(url_for('index'))
@@ -470,11 +443,11 @@ def login():
                 return response
             else:
                 return render_template_string(login_html, error="Invalid username or password.", message=None)             
-    # âœ… Always return something for GET
+
     return render_template_string(login_html, error=None, message=None)
 
 @app.route("/register", methods=["GET", "POST"])
-@limiter.limit("2 per minute")
+@limiter.limit("5 per minute")
 def register():
     if request.method == "POST":
         email = request.form.get("email")
@@ -565,6 +538,30 @@ def logout():
     session.pop('username', None)
     flash("You have been logged out successfully.", "info")
     return redirect(url_for("index"))
+    
+@csrf.exempt
+@app.route("/admin/login", methods=["GET", "POST"])
+@limiter.limit("5 per minute; 20 per hour")
+def admin_login():
+    if request.method == "POST":
+        username = request.form.get("username")
+        password = request.form.get("password")
+
+        with get_db_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("SELECT id, hashed_password FROM admins WHERE username = %s", (username,))
+            admin = cursor.fetchone()
+
+            if admin and verify_password(admin[1], password):
+                session["admin_id"] = admin[0]
+                session["is_admin"] = True
+                response = redirect(url_for("admin_dashboard"))
+                response.headers['X-Frame-Options'] = 'SAMEORIGIN'
+                return response
+            else:
+                return render_template_string(admin_login_html, error="Invalid admin credentials.")
+
+    return render_template_string(admin_login_html, error=None)    
 
 @app.route("/stream")
 def stream():
