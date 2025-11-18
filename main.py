@@ -2842,6 +2842,9 @@ base_html = """
             border-radius: 999px;
             cursor: pointer;
             transition: var(--transition);
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
         }
 
         .cta-button:hover { transform: translateY(-3px); background: var(--gold-gradient-reverse); }
@@ -2967,6 +2970,19 @@ base_html = """
             font-size: 0.9rem;
         }        
     </style>
+    <!-- PWA Manifest -->
+    <link rel="manifest" href="{{ url_for('static', filename='manifest.json') }}">
+    <meta name="theme-color" content="#your-theme-color">
+    
+    <!-- iOS Safari PWA support -->
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="Harambee Cash">
+    <link rel="apple-touch-icon" href="{{ url_for('static', filename='icons/icon-192x192.png') }}">
+    
+    <!-- PWA meta tags -->
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="Play & Win Big with Golden Opportunities!">    
 </head>
 <body>
     <!-- Header (logo kept in true color) -->
