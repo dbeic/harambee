@@ -3150,6 +3150,14 @@ base_html = """
         <p style="margin-top:16px; color:var(--text-muted);">© 2025 Pigasimu. All rights reserved.</p>
     </div>
 
+<!DOCTYPE html>
+<html>
+<head>
+    <!-- Your head content here -->
+</head>
+<body>
+    <!-- Your body content here -->
+
     <!-- Game Animation Overlay -->
     <script>
         class UltimatePlayExperience {
@@ -3167,7 +3175,6 @@ base_html = """
                     return;
                 }
 
-                // Replace form submission with AJAX for better UX
                 form.addEventListener('submit', async (e) => {
                     e.preventDefault();
                     await this.handlePlaySubmission();
@@ -3185,10 +3192,8 @@ base_html = """
                     button.disabled = true;
                     button.innerHTML = '🚀 LAUNCHING...';
             
-                    // Show immediate visual feedback
                     this.showLaunchAnimation();
             
-                    // Perform AJAX request
                     const response = await fetch('/play', {
                         method: 'POST',
                         headers: {
@@ -3218,22 +3223,14 @@ base_html = """
             }
 
             async handleSuccess(data) {
-                // Update wallet balance display
                 const walletBadge = document.querySelector('.wallet-badge');
                 if (walletBadge && data.new_balance !== undefined) {
                     walletBadge.textContent = `Ksh. ${data.new_balance.toFixed(2)}`;
                 }
         
-                // Show epic success animation
                 await this.showEpicSuccessAnimation();
-        
-                // Show success message
                 this.showFloatingMessage(data.message, 'success');
-        
-                // Play victory sound
                 this.playVictorySound();
-        
-                // Update game data
                 setTimeout(() => this.fetchGameData(), 1000);
             }
 
@@ -3260,10 +3257,8 @@ base_html = """
             }
 
             async showEpicSuccessAnimation() {
-                // Create confetti explosion
                 this.createConfetti();
         
-                // Show success message with flair
                 const successDiv = document.createElement('div');
                 successDiv.innerHTML = `
                     <div style="
@@ -3290,7 +3285,6 @@ base_html = """
         
                 document.body.appendChild(successDiv);
         
-                // Remove after 3 seconds
                 setTimeout(() => {
                     successDiv.style.animation = 'popOut 0.5s ease-in forwards';
                     setTimeout(() => successDiv.remove(), 500);
@@ -3298,7 +3292,7 @@ base_html = """
             }
 
             createConfetti() {
-                const colors = ['#FFD700',  '#D4AF37', '#FF6B35', '#00C9B1', '#FFD166'];
+                const colors = ['#FFD700', '#D4AF37', '#FF6B35', '#00C9B1', '#FFD166'];
                 for (let i = 0; i < 50; i++) {
                     setTimeout(() => {
                         const confetti = document.createElement('div');
@@ -3352,11 +3346,10 @@ base_html = """
                     oscillator.connect(gain);
                     gain.connect(context.destination);
             
-                    // Victory fanfare
-                    oscillator.frequency.setValueAtTime(523.25, context.currentTime); // C5
-                    oscillator.frequency.setValueAtTime(659.25, context.currentTime + 0.1); // E5
-                    oscillator.frequency.setValueAtTime(783.99, context.currentTime + 0.2); // G5
-                    oscillator.frequency.setValueAtTime(1046.50, context.currentTime + 0.3); // C6
+                    oscillator.frequency.setValueAtTime(523.25, context.currentTime);
+                    oscillator.frequency.setValueAtTime(659.25, context.currentTime + 0.1);
+                    oscillator.frequency.setValueAtTime(783.99, context.currentTime + 0.2);
+                    oscillator.frequency.setValueAtTime(1046.50, context.currentTime + 0.3);
             
                     oscillator.type = 'sine';
                     gain.gain.setValueAtTime(0.1, context.currentTime);
@@ -3365,7 +3358,7 @@ base_html = """
                     oscillator.start();
                     oscillator.stop(context.currentTime + 0.5);
                 } catch (e) {
-                    // Audio not supported - silent fail
+                    // Audio not supported
                 }
             }
 
@@ -3395,7 +3388,6 @@ base_html = """
                     const response = await fetch('/game_data');
                     const data = await response.json();
             
-                    // Update queue status if needed
                     if (data.current_user_queued) {
                         this.updateQueueStatus();
                     }
@@ -3450,28 +3442,20 @@ base_html = """
         `;
         document.head.appendChild(style);
 
-        // Initialize the ultimate play experience
         document.addEventListener('DOMContentLoaded', function() {
             new UltimatePlayExperience();
             console.log('🎮 Ultimate Play Experience Activated!');
         });
+    </script>
 
-        //////////////////////////////
-        // Offline features (trivia, achievements)
-        //////////////////////////////
+    <!-- Offline Features: Trivia Game -->
+    <script>
         const triviaQuestions = [
             { question: "What is the minimum play amount in Harambee Cash?", options: ["Ksh. 1","Ksh. 5","Ksh. 10","Ksh. 20"], answer: 0 },
             { question: "How often do games run in Harambee Cash?", options: ["Every 5 minutes","Every 30 seconds","Every hour","Once a day"], answer: 1 },
             { question: "What should you do before playing any game?", options: ["Set a budget","Borrow money","Play continuously","Ignore rules"], answer: 0 },
             { question: "Which is a good gaming practice?", options: ["Take regular breaks","Chase losses","Play when emotional","Ignore time"], answer: 0 }
         ];
-
-        const achievements = {
-            'offline_explorer': { name: 'Offline Explorer', description: 'Used the app while offline', unlocked: false },
-            'trivia_master':   { name: 'Trivia Master',   description: 'Got perfect score in trivia', unlocked: false },
-            'knowledge_seeker':{ name: 'Knowledge Seeker',description: 'Read all gaming tips', unlocked: false },
-            'app_installer':   { name: 'App Installer',   description: 'Installed the PWA app', unlocked: false }
-        };
 
         let currentTriviaQuestion = 0;
         let triviaScore = 0;
@@ -3483,7 +3467,10 @@ base_html = """
         }
 
         function showTriviaQuestion() {
-            if (currentTriviaQuestion >= triviaQuestions.length) { endTriviaGame(); return; }
+            if (currentTriviaQuestion >= triviaQuestions.length) { 
+                endTriviaGame(); 
+                return; 
+            }
             const q = triviaQuestions[currentTriviaQuestion];
             let html = `<h3>🧠 Question ${currentTriviaQuestion + 1}/${triviaQuestions.length}</h3>
                         <p style="font-size:1.1rem; margin:12px 0;">${q.question}</p>
@@ -3504,9 +3491,16 @@ base_html = """
                 else if (index === selectedIndex && index !== question.answer) option.classList.add('trivia-wrong');
                 option.style.pointerEvents = 'none';
             });
-            if (selectedIndex === question.answer) { triviaScore++; playSoundFeedback(true); }
-            else playSoundFeedback(false);
-            setTimeout(() => { currentTriviaQuestion++; showTriviaQuestion(); }, 1200);
+            if (selectedIndex === question.answer) { 
+                triviaScore++; 
+                playSoundFeedback(true); 
+            } else { 
+                playSoundFeedback(false); 
+            }
+            setTimeout(() => { 
+                currentTriviaQuestion++; 
+                showTriviaQuestion(); 
+            }, 1200);
         }
 
         function playSoundFeedback(isCorrect) {
@@ -3515,25 +3509,36 @@ base_html = """
                 const context = new (window.AudioContext || window.webkitAudioContext)();
                 const osc = context.createOscillator();
                 const gain = context.createGain();
-                osc.connect(gain); gain.connect(context.destination);
+                osc.connect(gain); 
+                gain.connect(context.destination);
                 osc.frequency.value = isCorrect ? 800 : 300;
                 osc.type = 'sine';
                 gain.gain.setValueAtTime(0.3, context.currentTime);
                 gain.gain.exponentialRampToValueAtTime(0.01, context.currentTime + 0.4);
                 osc.start(context.currentTime);
                 osc.stop(context.currentTime + 0.4);
-            } catch (e) { console.log('Audio not supported', e); }
+            } catch (e) { 
+                console.log('Audio not supported', e); 
+            }
         }
 
         function endTriviaGame() {
             let msg = '';
-            if (triviaScore === triviaQuestions.length) { msg = "🎉 Perfect! You're a Harambee Cash expert!"; unlockAchievement('trivia_master'); }
-            else if (triviaScore >= triviaQuestions.length / 2) msg = "👍 Great job! You know your stuff!";
-            else msg = "💪 Keep learning! Read the tips to improve!";
+            if (triviaScore === triviaQuestions.length) { 
+                msg = "🎉 Perfect! You're a Harambee Cash expert!"; 
+                unlockAchievement('trivia_master'); 
+            } else if (triviaScore >= triviaQuestions.length / 2) { 
+                msg = "👍 Great job! You know your stuff!"; 
+            } else { 
+                msg = "💪 Keep learning! Read the tips to improve!"; 
+            }
             const out = document.getElementById('offlineContent');
             if (out) out.innerHTML = `<div style="text-align:center; padding:20px;"><h3>🏆 Trivia Complete!</h3><p>Final Score: ${triviaScore}/${triviaQuestions.length}</p><p>${msg}</p><button class="offline-btn" onclick="startTriviaGame()">Play Again</button></div>`;
         }
+    </script>
 
+    <!-- Offline Features: Gaming Tips -->
+    <script>
         function showGamingTips() {
             const tips = [
                 "💰 Set a budget before you start playing and stick to it",
@@ -3546,9 +3551,13 @@ base_html = """
                 "📱 Install the app for better experience and notifications"
             ];
             let html = '<h3>📚 Smart Gaming Tips</h3><ul style="text-align:left; margin-top:10px;">';
-            tips.forEach(t => { html += `<li style="margin:8px 0; padding:8px; background:rgba(0,201,177,0.06); border-radius:8px;">${t}</li>`; });
+            tips.forEach(t => { 
+                html += `<li style="margin:8px 0; padding:8px; background:rgba(0,201,177,0.06); border-radius:8px;">${t}</li>`; 
+            });
             html += '</ul><div style="text-align:center; margin-top:12px;"><button class="offline-btn" onclick="showPracticeMode()">Next: Practice Strategies</button></div>';
-            const out = document.getElementById('offlineContent'); if (out) out.innerHTML = html; unlockAchievement('knowledge_seeker');
+            const out = document.getElementById('offlineContent'); 
+            if (out) out.innerHTML = html; 
+            unlockAchievement('knowledge_seeker');
         }
 
         function showPracticeMode() {
@@ -3561,14 +3570,27 @@ base_html = """
                 </div>
                 <div style="margin-top:12px;"><button class="offline-btn" onclick="startTriviaGame()">Test Your Knowledge</button></div>
             </div>`;
-            const out = document.getElementById('offlineContent'); if (out) out.innerHTML = html;
+            const out = document.getElementById('offlineContent'); 
+            if (out) out.innerHTML = html;
         }
+    </script>
+
+    <!-- Offline Features: Achievements System -->
+    <script>
+        const achievements = {
+            'offline_explorer': { name: 'Offline Explorer', description: 'Used the app while offline', unlocked: false },
+            'trivia_master':   { name: 'Trivia Master',   description: 'Got perfect score in trivia', unlocked: false },
+            'knowledge_seeker':{ name: 'Knowledge Seeker',description: 'Read all gaming tips', unlocked: false },
+            'app_installer':   { name: 'App Installer',   description: 'Installed the PWA app', unlocked: false }
+        };
 
         function unlockAchievement(id) {
             if (achievements[id] && !achievements[id].unlocked) {
                 achievements[id].unlocked = true;
                 showAchievementNotification(achievements[id].name);
-                try { localStorage.setItem('harambeeAchievements', JSON.stringify(achievements)); } catch(e){}
+                try { 
+                    localStorage.setItem('harambeeAchievements', JSON.stringify(achievements)); 
+                } catch(e){}
             }
         }
 
@@ -3577,7 +3599,12 @@ base_html = """
             n.className = 'achievement-notification';
             n.innerHTML = `<div style="text-align:center;"><div style="font-size:1.4rem;">🏆</div><h4 style="margin:6px 0;">Achievement Unlocked!</h4><div>${name}</div></div>`;
             document.body.appendChild(n);
-            setTimeout(() => { n.style.opacity = '0'; setTimeout(()=>{ if (n.parentNode) n.parentNode.removeChild(n); }, 500); }, 3000);
+            setTimeout(() => { 
+                n.style.opacity = '0'; 
+                setTimeout(()=>{ 
+                    if (n.parentNode) n.parentNode.removeChild(n); 
+                }, 500); 
+            }, 3000);
         }
 
         function viewAchievements() {
@@ -3590,11 +3617,14 @@ base_html = """
                 </div>`;
             });
             html += '</div>';
-            const out = document.getElementById('offlineContent'); if (out) out.innerHTML = html;
+            const out = document.getElementById('offlineContent'); 
+            if (out) out.innerHTML = html;
         }
 
         function saveAchievements() {
-            try { localStorage.setItem('harambeeAchievements', JSON.stringify(achievements)); } catch(e){}
+            try { 
+                localStorage.setItem('harambeeAchievements', JSON.stringify(achievements)); 
+            } catch(e){}
         }
 
         function loadAchievements() {
@@ -3602,11 +3632,18 @@ base_html = """
                 const s = localStorage.getItem('harambeeAchievements');
                 if (s) {
                     const loaded = JSON.parse(s);
-                    Object.keys(loaded).forEach(k => { if (achievements[k]) achievements[k].unlocked = loaded[k].unlocked; });
+                    Object.keys(loaded).forEach(k => { 
+                        if (achievements[k]) achievements[k].unlocked = loaded[k].unlocked; 
+                    });
                 }
-            } catch(e) { console.error('Error loading achievements', e); }
+            } catch(e) { 
+                console.error('Error loading achievements', e); 
+            }
         }
+    </script>
 
+    <!-- Network Status Handler -->
+    <script>
         function updateOnlineStatusUI() {
             const offlineBanner = document.getElementById('offlineBanner');
             const offlineEntertainment = document.getElementById('offlineEntertainment');
@@ -3619,10 +3656,188 @@ base_html = """
                 if (offlineEntertainment) offlineEntertainment.style.display = 'none';
             }
         }
+    </script>
 
-        //////////////////////////////
-        // Initialization (DOM ready)
-        //////////////////////////////
+    <!-- Game Status Updater -->
+    <script>
+        class GameStatusUpdater {
+            constructor() {
+                this.eventSource = null;
+                this.init();
+            }
+
+            init() {
+                this.startEventSource();
+                this.fetchGameData();
+                setInterval(() => this.fetchGameData(), 5000);
+            }
+
+            startEventSource() {
+                try {
+                    this.eventSource = new EventSource('/stream');
+                    
+                    this.eventSource.onmessage = (event) => {
+                        const data = JSON.parse(event.data);
+                        this.updateGameDisplay(data);
+                    };
+
+                    this.eventSource.onerror = (error) => {
+                        console.error('EventSource error:', error);
+                        setTimeout(() => this.startEventSource(), 5000);
+                    };
+                } catch (error) {
+                    console.error('Failed to start EventSource:', error);
+                }
+            }
+
+            async fetchGameData() {
+                try {
+                    const response = await fetch('/game_data');
+                    const data = await response.json();
+                    this.updateGameDisplay(data);
+                } catch (error) {
+                    console.error('Error fetching game data:', error);
+                    document.getElementById('next-game').textContent = 'Error loading game data';
+                    document.getElementById('game-results').innerHTML = '<p style="color:var(--text-muted);">Error loading recent games</p>';
+                }
+            }
+
+            updateGameDisplay(data) {
+                const nextGameElem = document.getElementById('next-game');
+                if (nextGameElem && data.upcoming_game) {
+                    nextGameElem.textContent = `${data.upcoming_game.game_code} at ${data.upcoming_game.timestamp}`;
+                }
+
+                const resultsContainer = document.getElementById('game-results');
+                if (resultsContainer && data.completed_games) {
+                    if (data.completed_games.length > 0) {
+                        let html = '';
+                        data.completed_games.forEach(game => {
+                            html += `
+                                <div class="game-result">
+                                    <p><strong>🎯 Game Code:</strong> ${game.game_code}</p>
+                                    <p><strong>🕒 Timestamp:</strong> ${game.timestamp}</p>
+                                    <p><strong>👥 Players:</strong> ${game.num_users}</p>
+                                    <p><strong>💰 Total Amount:</strong> ${game.total_amount}</p>
+                                    <p><strong>🏆 Winner:</strong> ${game.winner}</p>
+                                    <p><strong>🎁 Win Amount:</strong> ${game.winner_amount}</p>
+                                    <p><strong>📊 Outcome:</strong> ${game.outcome_message}</p>
+                                </div>
+                            `;
+                        });
+                        resultsContainer.innerHTML = html;
+                    } else {
+                        resultsContainer.innerHTML = '<p style="color:var(--text-muted);">No recent completed games.</p>';
+                    }
+                }
+
+                const playButton = document.getElementById('playButton');
+                if (playButton) {
+                    if (data.current_user_queued) {
+                        playButton.innerHTML = '✅ ENROLLED!';
+                        playButton.disabled = true;
+                        playButton.style.background = 'linear-gradient(135deg, #00C9B1, #00A896)';
+                    } else {
+                        playButton.innerHTML = '🎮 PLAY NOW & WIN BIG!';
+                        playButton.disabled = false;
+                        playButton.style.background = 'var(--gold-gradient)';
+                    }
+                }
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', function() {
+            new GameStatusUpdater();
+        });
+        
+        fetch('/game_data').then(r => r.json()).then(console.log);
+    </script>
+
+    <!-- Game Status Watcher -->
+    <script>
+        let lastGameStatus = '';
+
+        function watchGameStatus() {
+            setInterval(() => {
+                fetch('/api/game/status')
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.status === 'success' && lastGameStatus !== 'success') {
+                            document.getElementById('gameEndSound').play().catch(() => {});
+                            lastGameStatus = 'success';
+                        } else if (data.status !== 'success') {
+                            lastGameStatus = '';
+                        }
+                    })
+                    .catch(() => {});
+            }, 2000);
+        }
+
+        document.addEventListener('DOMContentLoaded', watchGameStatus);
+    </script>
+
+    <!-- Message Cleanup -->
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            setTimeout(() => {
+                const messages = document.querySelectorAll('.card');
+                messages.forEach(message => {
+                    if (message.textContent.includes('Please log in') || 
+                        message.textContent.includes('Access denied')) {
+                        message.remove();
+                    }
+                });
+            }, 5000);
+        });
+    </script>
+
+    <!-- PWA Service Worker -->
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', function() {
+                navigator.serviceWorker.register('{{ url_for("static", filename="service-worker.js") }}')
+                    .then(function(registration) {
+                        console.log('ServiceWorker registered successfully: ', registration.scope);
+                    })
+                    .catch(function(error) {
+                        console.log('ServiceWorker registration failed: ', error);
+                    });
+            });
+        }
+    </script>
+
+    <!-- PWA Install Prompt -->
+    <script>
+        let deferredPrompt;
+        const installBtn = document.getElementById('install-btn');
+
+        window.addEventListener('beforeinstallprompt', (e) => {
+            e.preventDefault();
+            deferredPrompt = e;
+            if (installBtn) {
+                installBtn.style.display = 'block';
+                installBtn.addEventListener('click', async () => {
+                    if (!deferredPrompt) return;
+                    deferredPrompt.prompt();
+                    const { outcome } = await deferredPrompt.userChoice;
+                    if (outcome === 'accepted') {
+                        console.log('PWA installed');
+                        installBtn.style.display = 'none';
+                    }
+                    deferredPrompt = null;
+                });
+            }
+        });
+
+        window.addEventListener('appinstalled', () => {
+            console.log('PWA was installed');
+            if (installBtn) installBtn.style.display = 'none';
+            deferredPrompt = null;
+        });
+    </script>
+
+    <!-- Main Initialization -->
+    <script>
         document.addEventListener('DOMContentLoaded', function() {
             // Instantiate protector and expose globally
             window.submissionProtector = new SubmissionProtector();
@@ -3646,7 +3861,6 @@ base_html = """
                         timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
                         hour12: false
                     });
-                    // Create timestamp element if absent
                     let ts = document.getElementById('timestamp-display');
                     if (!ts) {
                         ts = document.createElement('div');
@@ -3658,7 +3872,9 @@ base_html = """
                         if (container) container.insertBefore(ts, container.firstChild);
                     }
                     ts.textContent = `🕒 ${formatter.format(time)}`;
-                } catch (e) { console.error(e); }
+                } catch (e) { 
+                    console.error(e); 
+                }
             }
             updateLocalTime();
             setInterval(updateLocalTime, 1000);
@@ -3667,9 +3883,8 @@ base_html = """
             setTimeout(() => {
                 const cards = document.querySelectorAll('.card');
                 cards.forEach(c => {
-                    // only hide temporary messages (heuristic: those near top)
                     if (c.parentNode && c.parentNode === document.querySelector('.container')) {
-                        // keep main cards; we won't remove them automatically to avoid hiding UI
+                        // Keep main cards
                     }
                 });
             }, 9000);
@@ -3698,7 +3913,6 @@ base_html = """
                         return response.json();
                     })
                     .then(data => {
-                        // Next game
                         const nextElem = document.getElementById("next-game");
                         if (nextElem) {
                             if (data.upcoming_game && data.upcoming_game.game_code && data.upcoming_game.timestamp) {
@@ -3708,7 +3922,6 @@ base_html = """
                             }
                         }
 
-                        // Completed games list
                         const resultsContainer = document.getElementById("game-results");
                         if (resultsContainer) {
                             resultsContainer.innerHTML = "";
@@ -3732,7 +3945,6 @@ base_html = """
                             }
                         }
 
-                        // If current user queued
                         if (data.current_user_queued && window.submissionProtector) {
                             submissionProtector.handleSubmissionSuccess('✅ Already enrolled in current game');
                         }
@@ -3744,18 +3956,14 @@ base_html = """
                     });
             }
 
-            // Initial fetch and interval
             fetchGameData();
             setInterval(fetchGameData, 9000);
 
-            // Initialize and start GameAnimator monitor
             window.gameAnimator = new GameAnimator();
             window.gameAnimator.monitorGameStatus();
             {% endif %}
 
-            // Expose common globals
             window.handlePlayClick = function(event) {
-                // Basic UI-level double-click prevention, integrates with protector
                 if (window.submissionProtector && (window.submissionProtector.isSubmitting || window.submissionProtector.userEnrolled)) {
                     event.preventDefault();
                     event.stopImmediatePropagation();
@@ -3767,10 +3975,15 @@ base_html = """
                     return false;
                 }
                 const button = event.target;
-                if (button && button.disabled) { event.preventDefault(); return false; }
-                if (button) { button.disabled = true; button.innerHTML = '🎮 PROCESSING...'; }
+                if (button && button.disabled) { 
+                    event.preventDefault(); 
+                    return false; 
+                }
+                if (button) { 
+                    button.disabled = true; 
+                    button.innerHTML = '🎮 PROCESSING...'; 
+                }
 
-                // Show animation quickly
                 const ga = window.gameAnimator || null;
                 if (ga && ga.playGameStart) {
                     ga.playGameStart('...');
@@ -3784,195 +3997,21 @@ base_html = """
                     }
                 }
 
-                // Re-enable after a short fail-safe if form doesn't navigate
                 setTimeout(() => {
-                    if (button) { button.disabled = false; button.innerHTML = '🎮 PLAY NOW & WIN BIG!'; }
+                    if (button) { 
+                        button.disabled = false; 
+                        button.innerHTML = '🎮 PLAY NOW & WIN BIG!'; 
+                    }
                 }, 3000);
 
                 return true;
             };
 
-            // Ensure online status UI is current
             updateOnlineStatusUI();
-        }); // DOMContentLoaded
-// Add this to your base.html template in the script section
-class GameStatusUpdater {
-    constructor() {
-        this.eventSource = null;
-        this.init();
-    }
-
-    init() {
-        this.startEventSource();
-        this.fetchGameData();
-        setInterval(() => this.fetchGameData(), 5000); // Refresh every 5 seconds
-    }
-
-    startEventSource() {
-        try {
-            this.eventSource = new EventSource('/stream');
-            
-            this.eventSource.onmessage = (event) => {
-                const data = JSON.parse(event.data);
-                this.updateGameDisplay(data);
-            };
-
-            this.eventSource.onerror = (error) => {
-                console.error('EventSource error:', error);
-                // Try to reconnect after 5 seconds
-                setTimeout(() => this.startEventSource(), 5000);
-            };
-        } catch (error) {
-            console.error('Failed to start EventSource:', error);
-        }
-    }
-
-            async fetchGameData() {
-                try {
-                    const response = await fetch('/game_data');
-                    const data = await response.json();
-                    this.updateGameDisplay(data);
-                } catch (error) {
-                    console.error('Error fetching game data:', error);
-                    document.getElementById('next-game').textContent = 'Error loading game data';
-                    document.getElementById('game-results').innerHTML = '<p style="color:var(--text-muted);">Error loading recent games</p>';
-                }
-            }
-
-            updateGameDisplay(data) {
-                // Update next game
-                const nextGameElem = document.getElementById('next-game');
-                if (nextGameElem && data.upcoming_game) {
-                    nextGameElem.textContent = `${data.upcoming_game.game_code} at ${data.upcoming_game.timestamp}`;
-                }
-
-                // Update game results
-                const resultsContainer = document.getElementById('game-results');
-                if (resultsContainer && data.completed_games) {
-                    if (data.completed_games.length > 0) {
-                        let html = '';
-                        data.completed_games.forEach(game => {
-                            html += `
-                                <div class="game-result">
-                                    <p><strong>🎯 Game Code:</strong> ${game.game_code}</p>
-                                    <p><strong>🕒 Timestamp:</strong> ${game.timestamp}</p>
-                                    <p><strong>👥 Players:</strong> ${game.num_users}</p>
-                                    <p><strong>💰 Total Amount:</strong> ${game.total_amount}</p>
-                                    <p><strong>🏆 Winner:</strong> ${game.winner}</p>
-                                    <p><strong>🎁 Win Amount:</strong> ${game.winner_amount}</p>
-                                    <p><strong>📊 Outcome:</strong> ${game.outcome_message}</p>
-                                </div>
-                            `;
-                        });
-                        resultsContainer.innerHTML = html;
-                    } else {
-                        resultsContainer.innerHTML = '<p style="color:var(--text-muted);">No recent completed games.</p>';
-                    }
-                }
-
-                // Update play button status
-                const playButton = document.getElementById('playButton');
-                if (playButton) {
-                    if (data.current_user_queued) {
-                        playButton.innerHTML = '✅ ENROLLED!';
-                        playButton.disabled = true;
-                        playButton.style.background = 'linear-gradient(135deg, #00C9B1, #00A896)';
-                    } else {
-                        playButton.innerHTML = '🎮 PLAY NOW & WIN BIG!';
-                        playButton.disabled = false;
-                        playButton.style.background = 'var(--gold-gradient)';
-                    }
-                }
-            }
-        }
-
-        // Initialize when page loads
-        document.addEventListener('DOMContentLoaded', function() {
-            new GameStatusUpdater();
         });
-        
-        // Temporary test - add this to your  browser console
-        fetch('/game_data').then(r => r.json()).then(console.log);       
     </script>
-let lastGameStatus = '';
-
-        function watchGameStatus() {
-            setInterval(() => {
-                fetch('/api/game/status')
-                    .then(response => response.json())
-                    .then(data => {
-                        if (data.status === 'success' && lastGameStatus !== 'success') {
-                            document.getElementById('gameEndSound').play().catch(() => {});
-                            lastGameStatus = 'success';
-                        } else if (data.status !== 'success') {
-                            lastGameStatus = '';
-                        }
-                    })
-                    .catch(() => {});
-            }, 2000);
-        }
-
-        document. addEventListener('DOMContentLoaded', watchGameStatus);   
-    
-    <script>
-    // Auto-remove login required messages after 5 seconds
-    document.addEventListener('DOMContentLoaded', function() {
-        setTimeout(() => {
-            const messages = document.querySelectorAll('.card');
-            messages.forEach(message => {
-                if (message.textContent.includes('Please log in') || 
-                    message.textContent.includes('Access denied')) {
-                    message.remove();
-                }
-            });
-        }, 5000); // Remove after 5 seconds
-    });
-    </script>
-    
-    // PWA service worker registration
-    if ('serviceWorker' in navigator) {
-        window.addEventListener('load',  function() {
-            navigator.serviceWorker. register('{{ url_for("static",  filename="service-worker.js") }}')
-                .then(function(registration) {
-                    console. log('ServiceWorker registered successfully: ', registration.scope);
-                })
-                .catch(function(error) {
-                    console.log('ServiceWorker registration failed: ', error);
-                });
-        });
-    }            
-            
-
-    // Enhanced PWA install prompt
-    let deferredPrompt;
-    const installBtn = document.getElementById('install-btn');
-
-    window.addEventListener('beforeinstallprompt', (e) => {
-        e.preventDefault();
-        deferredPrompt = e;
-        if (installBtn) {
-            installBtn.style.display = 'block';
-            installBtn.addEventListener('click', async () => {
-                if (!deferredPrompt) return;
-                deferredPrompt.prompt();
-                const { outcome } = await deferredPrompt.userChoice;
-                if (outcome === 'accepted') {
-                    console.log('PWA installed');
-                    installBtn.style.display = 'none';
-                }
-                deferredPrompt = null;
-            });
-        }
-    });
-
-    window.addEventListener('appinstalled', () => {
-        console.log('PWA was installed');
-        if (installBtn) installBtn.style.display = 'none';
-        deferredPrompt = null;
-    });       
 </body>
 </html>
-"""
 
 register_html = """<!DOCTYPE html>
 <html lang="en">
