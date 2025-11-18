@@ -1,3 +1,4 @@
+#Removed bug
 #well indented
 #went for the best of the best 1 again after problems with two past
 #Best of the best 11
@@ -4012,13 +4013,14 @@ base_html = """
     </script>
 </body>
 </html>
+"""
 
 register_html = """<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Register â€“ Harambee Cash</title>
+    <title>Harambee Cash</title>
     <link rel="icon" href="{{ url_for('static', filename='favicon.ico') }}" />
     <style>
         body { font-family: Arial, sans-serif; background: linear-gradient(135deg, #a8edea, #fed6e3); display:flex; align-items:center; justify-content:center; height:100vh; margin:0; color:#333; }
