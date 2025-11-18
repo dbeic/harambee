@@ -2985,19 +2985,20 @@ base_html = """
     <meta name="description" content="Play & Win Big with Golden Opportunities!">    
 </head>
 <body>
+    <!-- PWA Install Button -->
+    <button id="install-btn" class="cta-button" style="display:none;">📱 Install App</button>
     <!-- Header (logo kept in true color) -->
     <header>
         <div class="site-logo" style="align-items:center;">
-            <img src="{{ url_for('static', filename='piclog.png') }}" alt="Harambee Cash Logo" />
-            <div>
+        <img src="{{ url_for('static', filename='piclog.png') }}"
+        alt="Harambee Cash Logo"
+        style="width:120px; height:auto;" />      
                 <div class="site-title">HARAMBEE CASH</div>
                 <div class="tagline" style="font-size:0.85rem; margin-top:4px;">Play & Win Big with Golden Opportunities!</div>
             </div>                          
             <div class="header-actions">
                 {% if session.get('user_id') %}
                     <div class="wallet-badge">Ksh. {{ wallet_balance | default(0.0) | float |  round(2) }}</div>
-                    <!-- PWA Install Button -->
-                    <button id="install-btn" class="cta-button" style="display:none;">📱 Install App</button>
                     <!-- Play form -->                    
                     <form method="POST" action="{{ url_for('play') }}" id="playForm" style="text-align:center; margin-bottom:16px;">
                         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
