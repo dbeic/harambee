@@ -277,6 +277,8 @@ def init_db():
 
 init_db()
 
+
+
 def login_required(role=None):
     def decorator(f):
         @wraps(f)
@@ -553,9 +555,9 @@ def admin_login():
         with get_db_connection() as conn:
             cursor = conn.cursor()
             cursor.execute("SELECT id, hashed_password FROM admins WHERE username = %s", (username,))
-            admin = cursor.fetchone()
-
-            if admin and verify_password(admin[1], password):
+            admin = cursor.fetchone()                 
+            if admin and check_password_hash(admin[1], password.strip()):
+    # Login successful
                 session["admin_id"] = admin[0]
                 session["is_admin"] = True
                 response = redirect(url_for("admin_dashboard"))
