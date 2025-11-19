@@ -569,27 +569,43 @@ def logout():
 @app.route("/admin/login", methods=["GET", "POST"])
 @limiter.limit("5 per minute, 20 per hour")
 def admin_login():
+    # If already logged in as admin, go to dashboard (same pattern as user login)
+    if session.get('admin_id'):
+        return redirect(url_for('admin_dashboard'))
+
     if request.method == "POST":
         username = request.form.get("username")
         password = request.form.get("password")
 
+        # Use the same get_db_connection pattern as user login
         with get_db_connection() as conn:
             cursor = conn.cursor()
-            cursor.execute("SELECT id, username, hashed_password FROM admins WHERE username = %s", (username,))
+            cursor.execute(
+                "SELECT id, username, hashed_password FROM admins WHERE username = %s",
+                (username,)
+            )
             admin = cursor.fetchone()
 
-            if admin and check_password_hash(admin[2], password):
-                session["admin_id"] = admin[0]
-                session["admin_username"] = admin[1]
-                session["is_admin"] = True
+            # Use the helper verify_password for consistency with user login helpers
+            if admin and verify_password(admin[2], password):
+                session['admin_id'] = admin[0]
+                session['admin_username'] = admin[1]
+                session['is_admin'] = True
+
                 response = redirect(url_for("admin_dashboard"))
+                # Same cache headers as your user login
                 response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
                 response.headers['Pragma'] = 'no-cache'
                 response.headers['Expires'] = '0'
+                # You previously added frame options for admin — keep it
                 response.headers['X-Frame-Options'] = 'SAMEORIGIN'
                 return response
             else:
-                return render_template_string(admin_login_html, error="Invalid admin credentials.")
+                # Mirror user login's render_template_string signature (error + message)
+                return render_template_string(admin_login_html, error="Invalid admin credentials.", message=None)
+
+    # GET -> show admin login
+    return render_template_string(admin_login_html, error=None, message=None)
 
     return render_template_string(admin_login_html, error=None)
 
