@@ -32,11 +32,13 @@ from shared import get_db_connection
 
 load_dotenv()
 
+app = Flask(__name__)
+
+app.secret_key = os.getenv('SECRET_KEY', 'dev-key-change-in-production')
+
 # --- Configuration & logging ---
 logging.basicConfig(level=logging.DEBUG, format="%(asctime)s - %(levelname)s - %(message)s")
 
-app = Flask(__name__)
-app.secret_key = os.getenv('SECRET_KEY', 'dev-key-change-in-production')
 app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(minutes=30)
 
 # Required environment vars
@@ -541,9 +543,8 @@ def logout():
     flash("You have been logged out successfully.", "info")
     return redirect(url_for("index"))
     
-@csrf.exempt
 @app.route("/admin/login", methods=["GET", "POST"])
-@limiter.limit("5 per minute; 20 per hour")
+@limiter.limit("5 per minute, 20 per hour")  # Corrected
 def admin_login():
     if request.method == "POST":
         username = request.form.get("username")
@@ -563,7 +564,7 @@ def admin_login():
             else:
                 return render_template_string(admin_login_html, error="Invalid admin credentials.")
 
-    return render_template_string(admin_login_html, error=None)    
+    return render_template_string(admin_login_html, error=None)
 
 @app.route("/stream")
 def stream():
@@ -1474,6 +1475,13 @@ def check_admin():
             """
         else:
             return f"No admin found with username: '{env_username}'"
+            
+@app.route('/api/game/status')
+def game_status():
+    # Replace this with your actual game logic
+    game_just_won = False  
+
+    return jsonify({'status': 'success' if game_just_won else 'pending'})            
                   
         
 #NON MONETARY ADMIN FUNCTIONS
