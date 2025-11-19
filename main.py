@@ -259,11 +259,32 @@ def init_db():
         
         # Add performance indexes
         cursor.execute("CREATE INDEX IF NOT EXISTS idx_game_queue_user_id ON game_queue(user_id)")
-        cursor.execute("CREATE INDEX IF NOT EXISTS idx_users_id ON users(id)")
         cursor.execute("CREATE INDEX IF NOT EXISTS idx_transactions_user_id ON transactions(user_id)")
         cursor.execute("CREATE INDEX IF NOT EXISTS idx_results_status ON results(status)")
         cursor.execute("CREATE INDEX IF NOT EXISTS idx_withdrawal_requests_user_id ON withdrawal_requests(user_id)")
-        cursor.execute("CREATE INDEX IF NOT EXISTS idx_deposit_requests_user_id ON deposit_requests(user_id)")        
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_deposit_requests_user_id ON deposit_requests(user_id)")
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_users_username ON users(username)")
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_users_email ON users(email)")
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_admins_username ON admins(username)")
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_user_activity_username ON user_activity(username)")
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_user_activity_timestamp ON user_activity(timestamp)")
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_visit_logs_timestamp ON visit_logs(timestamp)")
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_visit_logs_ip ON visit_logs(ip_address)")
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_transactions_timestamp ON transactions(timestamp)")
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_transactions_type ON transactions(type)")
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_transactions_game_code ON transactions(game_code)")
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_results_timestamp ON results(timestamp)")
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_results_game_code ON results(game_code)")
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_withdrawal_requests_status ON withdrawal_requests(status)")
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_withdrawal_requests_timestamp ON withdrawal_requests(request_time)")
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_deposit_requests_status ON deposit_requests(status)")
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_deposit_requests_timestamp ON deposit_requests(request_time)")
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_deposit_requests_voucher_code ON deposit_requests(voucher_code)")
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_user_suspensions_user_id ON user_suspensions(user_id)")
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_user_suspensions_end ON user_suspensions(suspension_end)")
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_win_earnings_user_id ON win_earnings(user_id)")
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_win_earnings_game_code ON win_earnings(game_code)")
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_win_earnings_withdrawn ON win_earnings(is_withdrawn)")          
         
         cursor.execute("SELECT id FROM admins WHERE username = %s LIMIT 1", (ADMIN_USERNAME,))
         exists = cursor.fetchone()
@@ -546,7 +567,7 @@ def logout():
     return redirect(url_for("index"))
     
 @app.route("/admin/login", methods=["GET", "POST"])
-@limiter.limit("5 per minute, 20 per hour")  # Corrected
+@limiter.limit("5 per minute, 20 per hour")
 def admin_login():
     if request.method == "POST":
         username = request.form.get("username")
@@ -554,13 +575,17 @@ def admin_login():
 
         with get_db_connection() as conn:
             cursor = conn.cursor()
-            cursor.execute("SELECT id, hashed_password FROM admins WHERE username = %s", (username,))
-            admin = cursor.fetchone()                 
-            if admin and check_password_hash(admin[1], password.strip()):
-    # Login successful
+            cursor.execute("SELECT id, username, hashed_password FROM admins WHERE username = %s", (username,))
+            admin = cursor.fetchone()
+
+            if admin and check_password_hash(admin[2], password):
                 session["admin_id"] = admin[0]
+                session["admin_username"] = admin[1]
                 session["is_admin"] = True
                 response = redirect(url_for("admin_dashboard"))
+                response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
+                response.headers['Pragma'] = 'no-cache'
+                response.headers['Expires'] = '0'
                 response.headers['X-Frame-Options'] = 'SAMEORIGIN'
                 return response
             else:
