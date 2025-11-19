@@ -983,11 +983,7 @@ def cashbook():
         }
         return render_template_string(cashbook_html, data=cashbook_data)
         
-###############
-@app.route('/api/game/status')
-def game_status():
-    return jsonify({'status': 'success' if game_just_won else 'pending'})
-        
+###############        
 @app.route("/withdraw", methods=["GET", "POST"])
 @login_required()
 @limiter.limit("3 per hour")
