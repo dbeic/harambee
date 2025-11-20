@@ -52,11 +52,9 @@ csrf = CSRFProtect(app)
 # Rate limiter that prefers logged-in user id, otherwise IP
 def rate_limit_key():
     return (
-        session.get("admin_id") or
-        session.get("user_id") or
+        session.get("user_id") or  # ← Use user_id for both regular users AND admins
         request.remote_addr
     )
-
 
 limiter = Limiter(
     key_func=rate_limit_key,
