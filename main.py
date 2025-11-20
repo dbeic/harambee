@@ -304,9 +304,16 @@ def login_required(role=None):
     def decorator(f):
         @wraps(f)
         def decorated_function(*args, **kwargs):
-            if 'user_id' not in session:
-                flash("Please log in to access this page.", "error")
-                return redirect(url_for('login'))
+            # For admin routes, check admin_id
+            if role == 'admin':
+                if 'admin_id' not in session:
+                    flash("Please log in as admin to access this page.", "error")
+                    return redirect(url_for('admin_login'))
+            # For user routes, check user_id  
+            else:
+                if 'user_id' not in session:
+                    flash("Please log in to access this page.", "error")
+                    return redirect(url_for('login'))
             
             if role is not None:
                 user_role = session.get('user_role', 'user')
