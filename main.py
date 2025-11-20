@@ -595,7 +595,7 @@ def admin_login():
             if admin and check_password_hash(admin[2], password):
                 session['admin_id'] = admin[0]
                 session['admin_username'] = admin[1]
-                session['is_admin'] = True
+                #session['is_admin'] = True
 
                 response = redirect(url_for("admin_dashboard"))
                 # Same cache headers as your user login
