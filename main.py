@@ -569,7 +569,7 @@ def logout():
     return redirect(url_for("index"))
     
 @app.route("/admin/login", methods=["GET", "POST"])
-@limiter.limit("5 per minute, 20 per hour")
+#@limiter.limit("5 per minute, 20 per hour")
 def admin_login():
     # If already logged in as admin, go to dashboard (same pattern as user login)
     if session.get('admin_id'):
