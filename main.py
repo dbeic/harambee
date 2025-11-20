@@ -288,8 +288,8 @@ def init_db():
         
         cursor.execute("SELECT id FROM admins WHERE username = %s LIMIT 1", (ADMIN_USERNAME,))
         exists = cursor.fetchone()
-        if not exists:
-            hashed = hashed_password(ADMIN_PASSWORD)
+if not exists:
+            hashed = generate_password_hash(ADMIN_PASSWORD)
             cursor.execute("INSERT INTO admins (username, hashed_password) VALUES (%s, %s)", (ADMIN_USERNAME, hashed))
             conn.commit()
             print('Admin created successfully')
@@ -587,7 +587,8 @@ def admin_login():
             admin = cursor.fetchone()
 
             # Use the helper verify_password for consistency with user login helpers
-            if admin and verify_password(admin[2], password):
+            # Use the SAME method as user login
+            if admin and check_password_hash(admin[2], password):
                 session['admin_id'] = admin[0]
                 session['admin_username'] = admin[1]
                 session['is_admin'] = True
@@ -604,10 +605,7 @@ def admin_login():
                 # Mirror user login's render_template_string signature (error + message)
                 return render_template_string(admin_login_html, error="Invalid admin credentials.", message=None)
 
-    # GET -> show admin login
     return render_template_string(admin_login_html, error=None, message=None)
-
-    return render_template_string(admin_login_html, error=None)
 
 @app.route("/stream")
 def stream():
