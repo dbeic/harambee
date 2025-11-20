@@ -4851,11 +4851,17 @@ DOCS_CONTENT = """
 """
 
 # --- Background game loop start ---
-@app.before_first_request
-def start_background_game_loop():
-    thread = threading.Thread(target=run_game, daemon=True)
-    thread.start()
+game_thread_started = False
 
+@app.before_request
+def start_background_game_loop():
+    global game_thread_started
+    if not game_thread_started:
+        game_thread_started = True
+        thread = threading.Thread(target=run_game, daemon=True, name="GameWorker")
+        thread.start()
+        logging.info("Game worker thread started")
+        
 # --- Run ---
 if __name__ == "__main__":
-    app.run(debug=True, host="127.0.0.1", port=5000)
+    app.run(debug=True, host="127.0.0.1", port=5000)        
