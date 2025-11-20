@@ -285,7 +285,7 @@ def init_db():
         
         cursor.execute("SELECT id FROM admins WHERE username = %s LIMIT 1", (ADMIN_USERNAME,))
         exists = cursor.fetchone()
-if not exists:
+        if not exists:
             hashed = generate_password_hash(ADMIN_PASSWORD)
             cursor.execute("INSERT INTO admins (username, hashed_password) VALUES (%s, %s)", (ADMIN_USERNAME, hashed))
             conn.commit()
