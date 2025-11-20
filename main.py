@@ -293,15 +293,13 @@ def init_db():
 
 init_db()
 
-
-
 def login_required(role=None):
     def decorator(f):
         @wraps(f)
         def decorated_function(*args, **kwargs):
             # For admin routes, check user_id (not admin_id)
             if role == 'admin':
-                if 'user_id' not in session:  # ← CHANGE THIS LINE
+                if 'user_id' not in session:  # CHANGED FROM 'admin_id'
                     flash("Please log in as admin to access this page.", "error")
                     return redirect(url_for('admin_login'))
             # For user routes, check user_id  
