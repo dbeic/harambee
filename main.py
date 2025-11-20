@@ -1,7 +1,4 @@
-#Removed bug
-#well indented
-#went for the best of the best 1 again after problems with two past
-#Best of the best 11
+#Reverted 30
 import os
 from dotenv import load_dotenv
 import psycopg2
