@@ -1,4 +1,3 @@
-#BEST OF BEST 35
 #Reverted 30
 import os
 from dotenv import load_dotenv
