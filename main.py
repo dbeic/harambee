@@ -301,9 +301,9 @@ def login_required(role=None):
     def decorator(f):
         @wraps(f)
         def decorated_function(*args, **kwargs):
-            # For admin routes, check admin_id
+            # For admin routes, check user_id (not admin_id)
             if role == 'admin':
-                if 'admin_id' not in session:
+                if 'user_id' not in session:  # ← CHANGE THIS LINE
                     flash("Please log in as admin to access this page.", "error")
                     return redirect(url_for('admin_login'))
             # For user routes, check user_id  
