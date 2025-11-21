@@ -293,27 +293,27 @@ def init_db():
 
 init_db()
 
-def login_required(role=None):
-    def decorator(f):
-        @wraps(f)
-        def decorated_function(*args, **kwargs):
+#def login_required(role=None):
+#    def decorator(f):
+#        @wraps(f)
+#        def decorated_function(*args, **kwargs):
 
-            # ADMIN ROUTES
-            if role == "admin":
-                if "admin_id" not in session:
-                    flash("Please log in as admin to access this page.", "error")
-                    return redirect(url_for("admin_login"))
-                return f(*args, **kwargs)
+#            # ADMIN ROUTES
+#            if role == "admin":
+#                if "admin_id" not in session:
+#                    flash("Please log in as admin to access this page.", "error")
+#                    return redirect(url_for("admin_login"))
+#                return f(*args, **kwargs)
 
-            # USER ROUTES
-            if "user_id" not in session:
-                flash("Please log in to access this page.", "error")
-                return redirect(url_for("login"))
+#            # USER ROUTES
+#            if "user_id" not in session:
+#                flash("Please log in to access this page.", "error")
+#                return redirect(url_for("login"))
 
-            return f(*args, **kwargs)
+#            return f(*args, **kwargs)
 
-        return decorated_function
-    return decorator
+#        return decorated_function
+#    return decorator
 
 # --- Wallet & transactions ---
 def validate_wallet_sufficient(user_id, amount):
@@ -549,7 +549,7 @@ def docs():
     
 
 @app.route("/logout")
-@login_required()
+#@login_required()
 @limiter.limit("5 per hour")
 def logout():
     session.pop('user_id', None)
@@ -642,7 +642,7 @@ def stream():
 
 
 @app.route("/game_data")
-@login_required()
+#@login_required()
 def game_data():
     try:
         with get_db_connection() as conn:
@@ -729,7 +729,7 @@ def game_data():
         }), 500
 
 @app.route("/play", methods=["POST"])
-@login_required()
+#@login_required()
 @limiter.limit("10 per minute")  # More generous limit
 def play():
     user_id = session.get("user_id")
@@ -800,7 +800,7 @@ def play():
         return jsonify({"success": False, "error": "System error. Please try again."})
 
 @app.route("/admin/add_allowed_user", methods=["POST"])
-@login_required(role='admin')
+#@login_required(role='admin')
 @limiter.limit("50 per hour")
 def admin_add_allowed_user():
     if not session.get("is_admin"):
@@ -825,7 +825,7 @@ def admin_add_allowed_user():
             return redirect(url_for("admin_dashboard", error="Failed to add allowed username."))
 
 @app.route("/admin/dashboard")
-@login_required(role='admin')
+#@login_required(role='admin')
 @limiter.limit("5 per hour")
 def admin_dashboard():
     if not session.get("is_admin"):
@@ -848,7 +848,7 @@ def admin_dashboard():
     )  
         
 @app.route("/admin/visitor_log")
-@login_required(role='admin')
+#@login_required(role='admin')
 @limiter.limit("5 per hour")
 def view_visits():
     if not session.get("is_admin"):
@@ -883,7 +883,7 @@ def view_visits():
     """, logs=logs)
 
 @app.route("/admin/logout")
-@login_required(role='admin')
+#@login_required(role='admin')
 @limiter.limit("3 per hour")
 def admin_logout():
     session.clear()
@@ -899,7 +899,7 @@ def robots_txt():
 
 #OLD CODE
 @app.route("/admin/update_wallet", methods=["POST"])
-@login_required(role='admin')
+#@@login_required(role='admin')
 @limiter.limit("50 per hour")
 def admin_update_wallet():
     if not session.get("is_admin"):
@@ -940,7 +940,7 @@ def admin_update_wallet():
         
 ###########
 @app.route("/cashbook")
-@login_required(role='admin')
+#@login_required(role='admin')
 @limiter.limit("5 per hour")
 def cashbook():
     if not session.get("is_admin"):
@@ -1016,7 +1016,7 @@ def cashbook():
         
 ###############        
 @app.route("/withdraw", methods=["GET", "POST"])
-@login_required()
+#@login_required()
 @limiter.limit("3 per hour")
 def withdraw():
     if not session.get('user_id'):
@@ -1221,7 +1221,7 @@ def withdrawal_receipt(receipt_code):
     return render_template_string(withdrawal_receipt_html, withdrawal=withdrawal)
     
 @app.route("/admin/withdrawals")
-@login_required(role='admin')
+#@login_required(role='admin')
 @limiter.limit("50 per hour")
 def admin_withdrawals():
     if not session.get("is_admin"):
@@ -1247,7 +1247,7 @@ def admin_withdrawals():
         pending_count=pending_count)
 
 @app.route("/admin/process_withdrawal", methods=["POST"])
-@login_required(role='admin')
+#@login_required(role='admin')
 @limiter.limit("50 per hour")
 def process_withdrawal():
     if not session.get("is_admin"):
@@ -1333,7 +1333,7 @@ def process_withdrawal():
         return jsonify({"error": "System error"}), 500
         
 @app.route("/deposit", methods=["GET", "POST"])
-@login_required()
+#@login_required()
 @limiter.limit("5 per hour")
 def deposit():
     if not session.get('user_id'):
@@ -1407,7 +1407,7 @@ def deposit_voucher(voucher_code):
     return render_template_string(deposit_voucher_html, deposit=deposit)
 
 @app.route("/admin/process_deposit", methods=["POST"])
-@login_required(role='admin')
+#@login_required(role='admin')
 @limiter.limit("50 per hour")
 def process_deposit():
     if not session.get("is_admin"):
@@ -1480,28 +1480,6 @@ def process_deposit():
         logging.error(f"Process deposit error: {e}")
         return jsonify({"error": "System error"}), 500
         
-@app.route("/check-admin")
-def check_admin():
-    env_username = os.getenv('ADMIN_USERNAME')
-    env_password = os.getenv('ADMIN_PASSWORD')
-    
-    with get_db_connection() as conn:
-        cursor = conn.cursor()
-        cursor.execute("SELECT username, hashed_password FROM admins WHERE username = %s", (env_username,))
-        admin = cursor.fetchone()
-        
-        if admin:
-            db_username, db_hashed = admin
-            password_correct = check_password_hash(db_hashed, env_password)
-            return f"""
-            .env Username: '{env_username}'<br>
-            .env Password: '{env_password}'<br>
-            DB Username: '{db_username}'<br>
-            Password Match: {password_correct}<br>
-            Try logging in with: '{env_username}' / '{env_password}'
-            """
-        else:
-            return f"No admin found with username: '{env_username}'"
             
 @app.route('/api/game/status')
 def game_status():
