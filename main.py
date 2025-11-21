@@ -297,30 +297,21 @@ def login_required(role=None):
     def decorator(f):
         @wraps(f)
         def decorated_function(*args, **kwargs):
-            # For admin routes, check user_id (not admin_id)
-            if role == 'admin':
-                if 'user_id' not in session:  # CHANGED FROM 'admin_id'
+
+            # ADMIN ROUTES
+            if role == "admin":
+                if "admin_id" not in session:
                     flash("Please log in as admin to access this page.", "error")
-                    return redirect(url_for('admin_login'))
-            # For user routes, check user_id  
-            else:
-                if 'user_id' not in session:
-                    flash("Please log in to access this page.", "error")
-                    return redirect(url_for('login'))
-            
-            if role is not None:
-                user_role = session.get('user_role', 'user')
-                
-                # Define role hierarchy (admin > moderator > user)
-                role_hierarchy = {'user': 0, 'moderator': 1, 'admin': 2}
-                required_level = role_hierarchy.get(role, 0)
-                user_level = role_hierarchy.get(user_role, 0)
-                
-                if user_level < required_level:
-                    flash(f"Access denied. {role.title()} role required.", "error")
-                    return redirect(url_for('index'))
-            
+                    return redirect(url_for("admin_login"))
+                return f(*args, **kwargs)
+
+            # USER ROUTES
+            if "user_id" not in session:
+                flash("Please log in to access this page.", "error")
+                return redirect(url_for("login"))
+
             return f(*args, **kwargs)
+
         return decorated_function
     return decorator
 
@@ -567,7 +558,6 @@ def logout():
     return redirect(url_for("index"))
     
 @app.route("/admin/login", methods=["GET", "POST"])
-#@limiter.limit("5 per minute, 20 per hour")
 def admin_login():
     # If already logged in as admin, go to dashboard (same pattern as user login)
     if session.get('admin_id'):
